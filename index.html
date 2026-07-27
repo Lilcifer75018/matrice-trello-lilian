@@ -238,6 +238,14 @@ main{display:grid;grid-template-columns:300px 1fr;overflow:hidden}
 .menu button:hover{background:var(--papier2)}
 .menu .puce{width:9px;height:9px;flex:none}
 .menu .touche{margin-left:auto;font-size:11px;color:var(--q4);font-variant-numeric:tabular-nums}
+/* Case à cocher : une préférence n'a pas l'air d'une action. */
+.menu .coche{
+  width:15px;height:15px;flex:none;border:1px solid var(--filet-fort);
+  display:flex;align-items:center;justify-content:center;font-size:11px;line-height:1
+}
+.menu button[aria-checked="true"] .coche{background:var(--encre);border-color:var(--encre);color:var(--papier)}
+#btnPlus{font-size:16px;line-height:1;padding:9px 13px;letter-spacing:0}
+#btnPlus[aria-expanded="true"]{background:var(--papier2);border-color:var(--encre)}
 
 .vide{
   font-family:var(--serif);font-style:italic;font-size:.95rem;color:var(--q4);
@@ -402,7 +410,6 @@ a.fiche-scene:hover .lire{color:var(--encre)}
 html.sans-mouvement *,html.sans-mouvement *::before{
   transition:none!important;animation:none!important
 }
-#btnAnim[aria-pressed="true"]{background:var(--encre);color:var(--papier);border-color:var(--encre)}
 /* Entrée du tableau : les fiches se posent. Décoratif mais court, et
    entièrement neutralisé si le système demande moins de mouvement. */
 @media (prefers-reduced-motion:no-preference){
@@ -451,12 +458,10 @@ html.sans-mouvement *,html.sans-mouvement *::before{
     <button id="btnTriage">Tri éclair</button>
     <button id="btnFocus">Je fais quoi ?</button>
     <button id="btnBilan">Bilan</button>
-    <button id="btnUndo" disabled title="Annuler le dernier classement (Ctrl+Z)">Annuler</button>
-    <button id="btnAnim" aria-pressed="false" title="Couper les animations">Sans animation</button>
+    <button id="btnUndo" hidden title="Annuler le dernier classement (Ctrl+Z)">Annuler</button>
     <span class="spacer"></span>
     <span id="status"></span>
-    <button id="reload" title="Recharger depuis Trello">↻</button>
-    <button id="logout">Sortir</button>
+    <button id="btnPlus" aria-haspopup="menu" aria-expanded="false" title="Réglages">⋯</button>
   </header>
   <main>
     <aside id="pool">
@@ -561,12 +566,6 @@ function mouvementCoupe(){
 }
 function appliquerMouvement(coupe){
   document.documentElement.classList.toggle("sans-mouvement", coupe);
-  const b = document.getElementById("btnAnim");
-  if(b){
-    b.setAttribute("aria-pressed", coupe ? "true" : "false");
-    b.textContent = "Sans animation";
-    b.title = coupe ? "Réactiver les animations" : "Couper les animations";
-  }
   localStorage.setItem(ANIM_KEY, coupe ? "1" : "0");
 }
 appliquerMouvement(localStorage.getItem(ANIM_KEY) === "1");
@@ -837,13 +836,47 @@ function showError(m){
 }
 function clearError(){ const b = $("#errbar"); if(b) b.remove(); }
 
+// Aucune panne ne doit rester muette : une erreur non rattrapée s'affiche
+// au lieu de donner l'impression que le clic n'a rien fait.
+window.addEventListener("error", e => {
+  if($("#app").style.display === "grid") showError("Défaut interne : " + (e.message || "inconnu"));
+});
+window.addEventListener("unhandledrejection", e => {
+  if($("#app").style.display === "grid") showError("Défaut interne : " + ((e.reason && e.reason.message) || e.reason || "inconnu"));
+});
+
 $("#connect").href = authorizeUrl(true);
 $("#manuallink").href = authorizeUrl(false);
-$("#btnAnim").onclick = () => appliquerMouvement(!document.documentElement.classList.contains("sans-mouvement"));
 $("#btnDemo").onclick = () => demarrerDemo();
 $("#demoConnecter").onclick = () => { location.href = authorizeUrl(true); };
-$("#reload").onclick = () => { if(demo) demarrerDemo(); else load(); };
-$("#logout").onclick = () => { localStorage.removeItem(LS); location.reload(); };
+
+// Réglages et actions rares derrière un seul bouton : l'en-tête ne garde que
+// les trois actions du travail quotidien.
+$("#btnPlus").onclick = ev => {
+  ev.stopPropagation();
+  if(document.querySelector(".menu")){ fermerMenus(); return; }
+  const coupe = document.documentElement.classList.contains("sans-mouvement");
+  const m = document.createElement("div");
+  m.className = "menu";
+  m.setAttribute("role", "menu");
+  m.innerHTML =
+    `<button id="mAnim" role="menuitemcheckbox" aria-checked="${coupe}">
+       <span class="coche">${coupe ? "✓" : ""}</span>Sans animation</button>
+     <div class="sep"></div>
+     <button id="mRecharger">Recharger depuis Trello</button>
+     <button id="mSortir">Se déconnecter</button>`;
+  document.body.appendChild(m);
+  placerMenu(m, $("#btnPlus"));
+  $("#btnPlus").setAttribute("aria-expanded", "true");
+  $("#mAnim").onclick = e => {
+    e.stopPropagation();
+    appliquerMouvement(!document.documentElement.classList.contains("sans-mouvement"));
+    fermerMenus();
+  };
+  $("#mRecharger").onclick = () => { fermerMenus(); if(demo) demarrerDemo(); else load(); };
+  $("#mSortir").onclick = () => { localStorage.removeItem(LS); location.reload(); };
+  $("#mAnim").focus();
+};
 $("#search").oninput = render;
 $("#listfilter").onchange = render;
 $("#manualgo").onclick = async () => {
@@ -1000,9 +1033,48 @@ async function trackHistory(){
 }
 
 /* ---------- changement de quadrant ---------- */
+// Retire la carte du tableau. C'est la seule façon de la faire réellement
+// disparaître de la matrice : « Retirer du classement » la renvoie au tas
+// des cartes à placer, il ne la sort pas du tableau.
+async function archiverCarte(card){
+  const i = cards.indexOf(card);
+  if(i === -1) return;
+  cards.splice(i, 1);
+  delete state.q1since[card.id];
+  if(!state.log.some(e => e.id === card.id)){
+    state.log.push({id:card.id, name:card.name.slice(0,80), quad:card.quad, doneAt:nowISO(), via:"archive"});
+  }
+  render();
+  setStatus("Archivage…"); clearError();
+  try{
+    await api(`/cards/${card.id}`, "PUT", "closed=true");
+    writeState();
+    setStatus(`${cards.length} cartes`);
+    vibrer(8);
+    toast("Carte archivée dans Trello", 0, async () => {
+      try{
+        await api(`/cards/${card.id}`, "PUT", "closed=false");
+        cards.push(card);
+        state.log = state.log.filter(e => e.id !== card.id);
+        writeState(); render();
+      }catch(e){ showError("La carte n'a pas pu être désarchivée : " + e.message); }
+    });
+  }catch(e){
+    cards.splice(i, 0, card);
+    state.log = state.log.filter(x => x.id !== card.id);
+    render();
+    showError("La carte n'a pas pu être archivée : " + e.message);
+    setStatus("");
+  }
+}
+
 async function setQuad(card, newQuad, sansUndo){
   const before = card.quad;
-  if(before === newQuad) return true;
+  // Ne jamais sortir en silence : si l'action ne change rien, le dire.
+  if(before === newQuad){
+    if(!sansUndo) toast(newQuad ? `Déjà dans « ${QNOM[newQuad]} »` : "Cette carte n'a aucun quadrant à retirer", newQuad);
+    return true;
+  }
   const labelsAvant = [...(card.labels || [])];
   card.quad = newQuad;
   if(newQuad === 1) state.q1since[card.id] = nowISO(); else delete state.q1since[card.id];
@@ -1056,7 +1128,9 @@ async function setQuad(card, newQuad, sansUndo){
     return false;
   }
 }
-function majUndo(){ $("#btnUndo").disabled = undoPile.length === 0; }
+// Le bouton n'existe que quand il y a quelque chose à annuler : un contrôle
+// grisé en permanence occupe la place sans jamais servir.
+function majUndo(){ $("#btnUndo").hidden = undoPile.length === 0; }
 $("#btnUndo").onclick = async () => {
   const last = undoPile.pop(); majUndo();
   if(!last) return;
@@ -1108,21 +1182,10 @@ function fiche(c, index){
   return el;
 }
 
-function ouvrirMenu(ancre, c){
-  fermerMenus();
-  const m = document.createElement("div");
-  m.className = "menu";
-  m.innerHTML = [1,2,3,4].map(q =>
-    `<button data-q="${q}"><span class="puce" style="background:var(--q${q})"></span>${QNUM[q]}. ${QNOM[q]}<span class="touche">${q}</span></button>`
-  ).join("")
-    + `<button data-q="0"><span class="puce" style="background:var(--filet-fort)"></span>Retirer du classement<span class="touche">0</span></button>`
-    + `<div class="sep"></div>`
-    + `<a href="${c.url}" target="_blank" rel="noopener">Ouvrir dans Trello ↗</a>`;
-  document.body.appendChild(m);
-
-  // Placement sous le bouton, rabattu vers le haut ou vers la gauche s'il
-  // n'y a pas la place. Mesuré après insertion, jamais supposé.
-  const b = ancre.querySelector(".ranger").getBoundingClientRect();
+// Placement d'un menu sous son bouton, rabattu vers le haut ou vers la gauche
+// s'il n'y a pas la place. Mesuré après insertion, jamais supposé.
+function placerMenu(m, bouton){
+  const b = bouton.getBoundingClientRect();
   const h = m.offsetHeight, l = m.offsetWidth, marge = 8;
   let haut = b.bottom + 2;
   if(haut + h > window.innerHeight - marge) haut = Math.max(marge, b.top - h - 2);
@@ -1131,12 +1194,40 @@ function ouvrirMenu(ancre, c){
   if(gauche + l > window.innerWidth - marge) gauche = Math.max(marge, window.innerWidth - marge - l);
   m.style.top = haut + "px";
   m.style.left = gauche + "px";
+}
+
+function ouvrirMenu(ancre, c){
+  fermerMenus();
+  const m = document.createElement("div");
+  m.className = "menu";
+  // Le quadrant actuel est coché, et « Retirer du classement » n'apparaît que
+  // s'il y a réellement quelque chose à retirer : proposer une action sans
+  // effet, c'est fabriquer un échec silencieux.
+  m.innerHTML = [1,2,3,4].map(q =>
+    `<button data-q="${q}" role="menuitemradio" aria-checked="${c.quad === q}">
+       <span class="puce" style="background:var(--q${q})"></span>${QNUM[q]}. ${QNOM[q]}
+       <span class="touche">${c.quad === q ? "✓" : q}</span></button>`
+  ).join("")
+    + (c.quad ? `<button data-q="0"><span class="puce" style="background:var(--filet-fort)"></span>Retirer du classement<span class="touche">0</span></button>` : "")
+    + `<div class="sep"></div>`
+    + `<button data-action="archiver"><span class="puce" style="background:var(--filet-fort)"></span>Archiver la carte<span class="touche">↓</span></button>`
+    + `<a href="${c.url}" target="_blank" rel="noopener">Ouvrir dans Trello ↗</a>`;
+  document.body.appendChild(m);
+  placerMenu(m, ancre.querySelector(".ranger"));
   m.querySelectorAll("button").forEach(b => {
-    b.onclick = ev => { ev.stopPropagation(); fermerMenus(); setQuad(c, +b.dataset.q); };
+    b.onclick = ev => {
+      ev.stopPropagation(); fermerMenus();
+      if(b.dataset.action === "archiver") archiverCarte(c);
+      else setQuad(c, +b.dataset.q);
+    };
   });
   m.querySelector("button").focus();
 }
-function fermerMenus(){ document.querySelectorAll(".menu").forEach(m => m.remove()); }
+function fermerMenus(){
+  document.querySelectorAll(".menu").forEach(m => m.remove());
+  const p = document.getElementById("btnPlus");
+  if(p) p.setAttribute("aria-expanded", "false");
+}
 document.addEventListener("click", e => {
   const c = e.target instanceof Element ? e.target : null;
   if(!c || !c.closest(".menu,.ranger")) fermerMenus();
