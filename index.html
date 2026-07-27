@@ -87,7 +87,26 @@ input::placeholder{color:var(--q4)}
 .note{font-family:var(--serif);font-size:.95rem;line-height:1.65;color:var(--encre2);border-left:2px solid var(--filet-fort);padding-left:16px;margin-top:34px}
 
 /* =================== application =================== */
-#app{display:none;height:100vh;grid-template-rows:auto 1fr;overflow:hidden}
+#app{display:none;height:100vh;grid-template-rows:auto auto 1fr;overflow:hidden}
+
+/* Bandeau du mode démonstration : présent en permanence, pour qu'on ne
+   croie jamais avoir rangé de vraies cartes. */
+#demoBar{
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  padding:9px 16px;background:var(--encre);color:var(--papier);font-size:13px
+}
+#demoBar[hidden]{display:none}
+#demoBar .quoi{font-family:var(--serif);font-style:italic}
+#demoBar .spacer{flex:1}
+#demoBar button{border-color:rgba(250,248,245,.45);color:var(--papier);padding:7px 13px}
+#demoBar button:hover{background:rgba(250,248,245,.14);border-color:var(--papier)}
+#demoBar .fort{font-weight:800;letter-spacing:.1em;text-transform:uppercase;font-size:11px}
+
+#setup .ou{
+  font-family:var(--serif);font-style:italic;color:var(--encre2);
+  margin:14px 0 0;font-size:.98rem
+}
+#setup .ou button{margin-left:6px}
 header{
   display:flex;align-items:center;gap:8px;padding:10px 16px;
   border-bottom:1px solid var(--filet);flex-wrap:wrap;background:var(--papier)
@@ -394,6 +413,7 @@ html.sans-mouvement *,html.sans-mouvement *::before{
   <h1>Urgence<br>× Impact</h1>
   <p class="chapeau">Vos cartes Trello, posées sur une table de tri. Vous rangez, <em>l'outil écrit dans Trello</em>. Rien à recopier, rien à maintenir en double.</p>
   <a class="btn btn-plein" id="connect" href="#">Se connecter avec Trello</a>
+  <p class="ou">Vous préférez voir avant de connecter quoi que ce soit ?<button id="btnDemo">Essayer sans compte</button></p>
   <p id="setupmsg"></p>
 
   <div class="regle"></div>
@@ -413,6 +433,12 @@ html.sans-mouvement *,html.sans-mouvement *::before{
 </section>
 
 <div id="app">
+  <div id="demoBar" hidden>
+    <span class="fort">Démonstration</span>
+    <span class="quoi">cartes d'exemple, rien n'est enregistré nulle part</span>
+    <span class="spacer"></span>
+    <button id="demoConnecter">Connecter mon Trello</button>
+  </div>
   <header>
     <div class="titre">Urgence <span>×</span> Impact</div>
     <select id="listfilter" aria-label="Filtrer par liste"></select>
@@ -556,6 +582,75 @@ function vibrer(ms){
   if(navigator.vibrate) try{ navigator.vibrate(ms); }catch(e){}
 }
 
+/* ---------- mode démonstration ----------
+   Un outil de tri ne se comprend pas en le lisant, seulement en l'utilisant.
+   La démo donne le produit complet sur des cartes d'exemple, sans compte et
+   sans le moindre appel réseau : rien n'est lu, rien n'est écrit. */
+let demo = false, demoSeq = 0;
+
+function cartesDemo(){
+  const j = n => new Date(Date.now() + n*86400000).toISOString();
+  const c = (id, name, list, quad, due) => ({id, name, list, quad, due: due || null,
+    dueComplete:false, url:"https://trello.com/", labels:[]});
+  return [
+    c("d1","Relancer le devis envoyé au cabinet Renaud il y a douze jours","Cette semaine",1,j(-3)),
+    c("d2","Envoyer la facture 214, échéance de paiement dépassée","Cette semaine",1,j(-1)),
+    c("d3","Préparer l'atelier client de jeudi","Cette semaine",1,j(2)),
+    c("d4","Écrire la page tarifs du site","En cours",2,j(21)),
+    c("d5","Mettre en place les relances de facture automatiques","En cours",2),
+    c("d6","Rappeler le comptable pour la TVA du trimestre","Cette semaine",2,j(9)),
+    c("d7","Trier la boîte mail de contact","En cours",3),
+    c("d8","Répondre à l'invitation du petit-déjeuner réseau","Cette semaine",3,j(4)),
+    c("d9","Renommer les dossiers clients de l'an dernier","Un jour",4),
+    c("d10","Tester le nouvel outil de prise de notes dont tout le monde parle","Un jour",4),
+    c("d11","Rédiger l'étude de cas du projet terminé en mars","Boîte de réception",0),
+    c("d12","Décider si on garde l'abonnement au logiciel de facturation","Boîte de réception",0),
+    c("d13","Reprendre contact avec l'ancien client du secteur médical","Boîte de réception",0,j(6)),
+    c("d14","Ranger les photos du dernier événement","Boîte de réception",0),
+    c("d15","Préparer les questions de l'entretien annuel","Boîte de réception",0,j(13))
+  ];
+}
+
+async function apiDemo(path, method){
+  // Aucun appel ne sort. Seule la création de carte doit répondre quelque
+  // chose d'exploitable, le reste n'a pas de retour utile.
+  if(method === "POST" && path === "/cards"){
+    return {id:"demo-" + (++demoSeq), shortUrl:"https://trello.com/"};
+  }
+  return {};
+}
+
+function demarrerDemo(){
+  demo = true;
+  auth = {key:"demo", token:"demo"};
+  labelIds = {1:"demo-q1", 2:"demo-q2", 3:"demo-q3", 4:"demo-q4"};
+  lists = [{id:"dl1",name:"Boîte de réception"},{id:"dl2",name:"Cette semaine"},
+           {id:"dl3",name:"En cours"},{id:"dl4",name:"Un jour"},{id:"dl5",name:"Fait"}];
+  cards = cartesDemo();
+  // Une carte déjà ancienne en Q1, pour que l'alerte d'ancienneté se voie,
+  // et un journal court pour que le bilan ait quelque chose à montrer.
+  state = emptyState();
+  state.q1since = {d1: new Date(Date.now() - 19*86400000).toISOString(),
+                   d2: new Date(Date.now() - 2*86400000).toISOString(),
+                   d3: new Date(Date.now() - 1*86400000).toISOString()};
+  state.log = [
+    {id:"x1", name:"Envoyer le compte rendu de l'atelier", quad:2, doneAt:new Date(Date.now()-2*86400000).toISOString(), via:"fait"},
+    {id:"x2", name:"Payer l'URSSAF du trimestre", quad:1, doneAt:new Date(Date.now()-3*86400000).toISOString(), via:"fait"},
+    {id:"x3", name:"Classer les notes de la réunion", quad:3, doneAt:new Date(Date.now()-4*86400000).toISOString(), via:"fait"},
+    {id:"x4", name:"Répondre au sondage du réseau", quad:3, doneAt:new Date(Date.now()-5*86400000).toISOString(), via:"archive"}
+  ];
+  state.ids = cards.map(c => c.id);
+  state.seance = {at:new Date(Date.now() - 26*3600000).toISOString(), ids: cards.slice(0,12).map(c => c.id)};
+  nouvellesIds = new Set(cards.slice(12).map(c => c.id));
+
+  $("#setup").style.display = "none";
+  $("#app").style.display = "grid";
+  $("#demoBar").hidden = false;
+  premierRendu = true;
+  render();
+  setStatus(`${cards.length} cartes d'exemple`);
+}
+
 /* ---------- accès Trello ---------- */
 function authorizeUrl(withReturn){
   // Flux "implicit token" : le jeton revient dans le fragment d'URL, qui
@@ -574,6 +669,7 @@ function creds(){ return `key=${encodeURIComponent(auth.key)}&token=${encodeURIC
 // passés dans l'adresse, ils la font dépasser la longueur acceptée et la
 // requête échoue avec un simple "Failed to fetch", sans code d'erreur.
 async function api(path, method="GET", params="", corps=null){
+  if(demo) return apiDemo(path, method);
   const sep = path.includes("?") ? "&" : "?";
   const url = `https://api.trello.com/1${path}${sep}${creds()}${params?"&"+params:""}`;
   const opts = {method};
@@ -739,8 +835,10 @@ function clearError(){ const b = $("#errbar"); if(b) b.remove(); }
 $("#connect").href = authorizeUrl(true);
 $("#manuallink").href = authorizeUrl(false);
 $("#btnAnim").onclick = () => appliquerMouvement(!document.documentElement.classList.contains("sans-mouvement"));
+$("#btnDemo").onclick = () => demarrerDemo();
+$("#demoConnecter").onclick = () => { location.href = authorizeUrl(true); };
+$("#reload").onclick = () => { if(demo) demarrerDemo(); else load(); };
 $("#logout").onclick = () => { localStorage.removeItem(LS); location.reload(); };
-$("#reload").onclick = () => load();
 $("#search").oninput = render;
 $("#listfilter").onchange = render;
 $("#manualgo").onclick = async () => {
