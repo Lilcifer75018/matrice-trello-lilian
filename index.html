@@ -306,6 +306,18 @@ a.fiche-scene:hover .lire{color:var(--encre)}
 /* Palier : l'avancée devient sensible sans interrompre le geste. */
 #sceneCompte.palier{color:var(--encre);font-weight:800;letter-spacing:.06em}
 
+/* Capture d'une carte manquante, pendant le tri seulement : la tâche qui
+   revient en tête au moment où on trie ne se note nulle part ailleurs. */
+#capture{max-width:620px;width:100%;margin-top:26px;border-top:1px solid var(--filet);padding-top:18px}
+#capture[hidden]{display:none}
+#capture .rangee{display:flex;gap:9px;flex-wrap:wrap;margin-top:10px}
+#capture select{flex:1;min-width:150px}
+#capture .lab{font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--encre2);margin-bottom:9px}
+#captureTexte{font-size:15px}
+.captureLien{margin-top:22px;text-align:center}
+.captureLien button{border-color:transparent;color:var(--encre2);text-decoration:underline}
+.captureLien button:hover{color:var(--encre);background:transparent}
+
 .question{
   font-family:var(--serif);font-style:italic;font-size:clamp(1.4rem,4vw,2rem);
   font-weight:300;text-align:center;margin:30px 0 20px
@@ -409,7 +421,7 @@ html.sans-mouvement *,html.sans-mouvement *::before{
     <button id="btnFocus">Je fais quoi ?</button>
     <button id="btnBilan">Bilan</button>
     <button id="btnUndo" disabled title="Annuler le dernier classement (Ctrl+Z)">Annuler</button>
-    <button id="btnAnim" aria-pressed="false" title="Couper les animations">Calme</button>
+    <button id="btnAnim" aria-pressed="false" title="Couper les animations">Sans animation</button>
     <span class="spacer"></span>
     <span id="status"></span>
     <button id="reload" title="Recharger depuis Trello">↻</button>
@@ -521,7 +533,7 @@ function appliquerMouvement(coupe){
   const b = document.getElementById("btnAnim");
   if(b){
     b.setAttribute("aria-pressed", coupe ? "true" : "false");
-    b.textContent = coupe ? "Calme activé" : "Calme";
+    b.textContent = "Sans animation";
     b.title = coupe ? "Réactiver les animations" : "Couper les animations";
   }
   localStorage.setItem(ANIM_KEY, coupe ? "1" : "0");
@@ -1117,6 +1129,9 @@ document.addEventListener("keydown", e => {
 
   if($("#scene").hidden) return;
   if(e.key === "Escape"){ fermerScene(); return; }
+  // Pendant la saisie d'une nouvelle carte, O et N s'écrivent, ils ne
+  // répondent pas à la question posée.
+  if(cible && cible.matches("input, select, textarea")) return;
   if(triageState){
     const k = e.key.toLowerCase();
     if(e.key === "ArrowRight" || k === "o"){ e.preventDefault(); repondre(true); }
@@ -1172,10 +1187,64 @@ function rendreTriage(anime){
     </div>
     <p class="raccourci">Au clavier : <b>O</b> oui, <b>N</b> non, <b>Échap</b> pour arrêter. Ton avancée est enregistrée au fur et à mesure.</p>
     ${miniMatrice(compteursActuels(), anime)}
+    <div class="captureLien"><button id="captureOuvre">Une tâche te revient en tête ? Note-la</button></div>
+    <div id="capture" hidden>
+      <div class="lab">Nouvelle carte, déjà rangée</div>
+      <input id="captureTexte" placeholder="Ce qu'il y a à faire" autocomplete="off">
+      <div class="rangee">
+        <select id="captureQuad" aria-label="Quadrant">
+          ${[1,2,3,4].map(q => `<option value="${q}">${QNUM[q]}. ${QNOM[q]}</option>`).join("")}
+        </select>
+        <select id="captureListe" aria-label="Liste Trello">
+          ${lists.filter(l => l.name !== "Fait").map(l => `<option value="${l.id}">${esc(l.name)}</option>`).join("")}
+        </select>
+        <button class="btn-plein" id="captureGo">Créer</button>
+      </div>
+    </div>
   `, `${st.index + 1} sur ${st.file.length}`, progression);
 
   $("#triOui").onclick = () => repondre(true);
   $("#triNon").onclick = () => repondre(false);
+  $("#captureOuvre").onclick = () => {
+    $("#capture").hidden = false;
+    $("#captureOuvre").parentElement.hidden = true;
+    $("#captureTexte").focus();
+  };
+  $("#captureGo").onclick = creerCarte;
+  $("#captureTexte").onkeydown = e => { if(e.key === "Enter"){ e.preventDefault(); creerCarte(); } };
+}
+
+// Une carte naît déjà classée : c'est la seule chose que Trello ne sait pas
+// faire, et donc la seule qui justifie de créer une carte ici plutôt que
+// là-bas. Volontairement limité au titre : si la carte mérite mieux qu'une
+// ligne, elle mérite d'être ouverte dans Trello.
+async function creerCarte(){
+  const champ = $("#captureTexte");
+  const nom = champ.value.trim();
+  if(!nom){ champ.focus(); return; }
+  const quad = +$("#captureQuad").value;
+  const idListe = $("#captureListe").value;
+  const bouton = $("#captureGo");
+  bouton.disabled = true; bouton.textContent = "Création…";
+  try{
+    const faite = await api(`/cards`, "POST", "", {
+      idList: idListe, name: nom, idLabels: labelIds[quad] ? [labelIds[quad]] : []
+    });
+    const nomListe = (lists.find(l => l.id === idListe) || {}).name || "?";
+    cards.push({id:faite.id, name:nom, list:nomListe, due:null, dueComplete:false,
+                url:faite.shortUrl || faite.url, labels:[], quad});
+    if(quad === 1) state.q1since[faite.id] = nowISO();
+    writeState();
+    champ.value = "";
+    vibrer(8);
+    toast(`Créée dans « ${QNOM[quad]} »`, quad);
+    render();
+    if(triageState) rendreTriage();   // la mini matrice reflète la nouvelle carte
+    setTimeout(() => { const c = $("#captureTexte"); if(c){ $("#captureOuvre")?.click(); c.focus(); } }, 0);
+  }catch(e){
+    showError("La carte n'a pas pu être créée : " + e.message);
+    bouton.disabled = false; bouton.textContent = "Créer";
+  }
 }
 
 async function repondre(oui){
