@@ -447,10 +447,18 @@ function authorizeUrl(withReturn){
   return `https://trello.com/1/authorize?${params.toString()}`;
 }
 function creds(){ return `key=${encodeURIComponent(auth.key)}&token=${encodeURIComponent(auth.token)}`; }
-async function api(path, method="GET", params=""){
+// `corps` sert aux champs volumineux (la description de la carte mémoire) :
+// passés dans l'adresse, ils la font dépasser la longueur acceptée et la
+// requête échoue avec un simple "Failed to fetch", sans code d'erreur.
+async function api(path, method="GET", params="", corps=null){
   const sep = path.includes("?") ? "&" : "?";
   const url = `https://api.trello.com/1${path}${sep}${creds()}${params?"&"+params:""}`;
-  const r = await fetch(url, {method});
+  const opts = {method};
+  if(corps){
+    opts.headers = {"Content-Type":"application/json"};
+    opts.body = JSON.stringify(corps);
+  }
+  const r = await fetch(url, opts);
   if(!r.ok) throw new Error(`Trello ${r.status} sur ${path} : ${(await r.text()).slice(0,140)}`);
   const txt = await r.text();
   return txt ? JSON.parse(txt) : null;
@@ -462,14 +470,24 @@ function loadJSON(key, fallback){ try{ const v = localStorage.getItem(key); retu
 function saveJSON(key, obj){ localStorage.setItem(key, JSON.stringify(obj)); }
 
 /* ---------- mémoire partagée dans une carte Trello archivée ---------- */
-function emptyState(){ return {q1since:{}, log:[], snapshot:{}, noms:{}, quads:{}}; }
+/* La mémoire doit tenir dans une description de carte Trello, plafonnée à
+   16 384 caractères. On ne stocke donc que l'indispensable :
+   - q1since : date d'entrée en Q1, uniquement pour les cartes en Q1
+   - fait    : identifiants déjà vus dans la liste Fait
+   - ids     : identifiants des cartes ouvertes au dernier passage
+   - log     : les 30 dernières sorties
+   Le nom et le quadrant d'une carte archivée sont demandés à Trello au moment
+   où on la détecte, ce qui arrive quelques fois par session, plutôt que
+   recopiés en permanence pour les 120 cartes. */
+const LOG_MAX = 30;
+function emptyState(){ return {q1since:{}, fait:[], ids:[], log:[]}; }
 
 function encodeState(st){
   // Trace lisible par un humain qui ouvrirait la carte : les cartes sorties
   // de la matrice disparaissent de l'écran, pas de l'histoire.
   const recentes = [...(st.log || [])]
     .sort((a,b) => (a.doneAt < b.doneAt ? 1 : -1))
-    .slice(0, 40)
+    .slice(0, 25)
     .map(e => {
       const d = new Date(e.doneAt).toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit",year:"numeric"});
       return `- ${d} — ${e.via === "archive" ? "archivée" : "terminée"} — ${QNOM[e.quad] || "non classée"} — ${e.name}`;
@@ -496,7 +514,11 @@ function decodeState(desc){
   if(i === -1 || j === -1 || j < i) return emptyState();
   try{
     const p = JSON.parse(desc.slice(i + MARK_START.length, j).trim());
-    return {q1since:p.q1since||{}, log:Array.isArray(p.log)?p.log:[], snapshot:p.snapshot||{}, noms:p.noms||{}, quads:p.quads||{}};
+    // Tolère l'ancien format (snapshot d'objets) : on le convertit au passage.
+    const fait = Array.isArray(p.fait) ? p.fait
+      : Object.entries(p.snapshot || {}).filter(([,l]) => l === "Fait").map(([id]) => id);
+    const ids = Array.isArray(p.ids) ? p.ids : Object.keys(p.snapshot || {});
+    return {q1since:p.q1since||{}, fait, ids, log:Array.isArray(p.log)?p.log:[]};
   }catch(e){ return emptyState(); }
 }
 async function findOrCreateStateCard(){
@@ -511,8 +533,9 @@ async function findOrCreateStateCard(){
   const hit = (closed || []).find(c => c.name === STATE_CARD_NAME);
   if(hit){ localStorage.setItem(STATE_ID_KEY, hit.id); return hit; }
   setStatus("Création de la carte mémoire…");
-  const made = await api(`/cards`, "POST",
-    `idList=${(lists[0]||{}).id}&name=${encodeURIComponent(STATE_CARD_NAME)}&desc=${encodeURIComponent(encodeState(emptyState()))}`);
+  const made = await api(`/cards`, "POST", "", {
+    idList:(lists[0]||{}).id, name:STATE_CARD_NAME, desc:encodeState(emptyState())
+  });
   await api(`/cards/${made.id}`, "PUT", "closed=true");
   localStorage.setItem(STATE_ID_KEY, made.id);
   return made;
@@ -539,8 +562,16 @@ function writeState(){
     try{
       const remote = decodeState((await api(`/cards/${stateCardId}`, "GET", "fields=desc")).desc);
       state = mergeStates(remote, state);
+      // Garde-fou : la description d'une carte Trello est plafonnée à 16 384
+      // caractères. On sacrifie les entrées de journal les plus anciennes
+      // plutôt que de laisser l'enregistrement échouer en silence.
+      let corps = encodeState(state);
+      while(corps.length > 15500 && state.log.length){
+        state.log.sort((a,b) => (a.doneAt < b.doneAt ? 1 : -1)).pop();
+        corps = encodeState(state);
+      }
       saveJSON(STATE_CACHE_KEY, state);
-      await api(`/cards/${stateCardId}`, "PUT", `desc=${encodeURIComponent(encodeState(state))}`);
+      await api(`/cards/${stateCardId}`, "PUT", "", {desc: corps});
     }catch(e){
       showError("La mémoire n'a pas pu être enregistrée (le classement, lui, est bien dans Trello) : " + e.message);
     }
@@ -560,10 +591,10 @@ function mergeStates(a, b){
   const cutoff = Date.now() - RETENTION_J*86400000;
   return {
     q1since,
-    log: log.filter(e => new Date(e.doneAt).getTime() >= cutoff),
-    snapshot:{...a.snapshot, ...b.snapshot},
-    noms:{...a.noms, ...b.noms},
-    quads:{...a.quads, ...b.quads}
+    fait: [...new Set([...(a.fait||[]), ...(b.fait||[])])],
+    ids: b.ids && b.ids.length ? b.ids : (a.ids || []),   // l'état local est le plus frais
+    log: log.filter(e => new Date(e.doneAt).getTime() >= cutoff)
+           .sort((x,y) => (x.doneAt < y.doneAt ? 1 : -1)).slice(0, LOG_MAX)
   };
 }
 
@@ -643,7 +674,7 @@ async function load(){
       url:c.shortUrl, labels:c.idLabels || [], quad:quadOf(c.idLabels || [])
     }));
     state = await readState();
-    trackHistory();
+    await trackHistory();
     const sel = $("#listfilter"), prev = sel.value;
     sel.innerHTML = `<option value="">Toutes les listes</option>` + lists.map(l => `<option>${esc(l.name)}</option>`).join("");
     sel.value = prev || "";
@@ -672,44 +703,41 @@ function quadOf(ids){
 }
 
 /* ---------- suivi de l'historique ---------- */
-function trackHistory(){
-  const snapBefore = state.snapshot || {};
-  let changed = false;
+async function trackHistory(){
+  const idsAvant = new Set(state.ids || []);
+  const faitAvant = new Set(state.fait || []);
   const dejaVues = new Set(state.log.map(e => e.id));
+  const ids = new Set(cards.map(c => c.id));
+  let changed = false;
 
+  // Passée dans la liste Fait depuis le dernier passage.
   cards.forEach(c => {
-    const prev = snapBefore[c.id];
-    if(prev && prev !== "Fait" && c.list === "Fait" && !dejaVues.has(c.id)){
-      state.log.push({id:c.id, name:c.name, quad:c.quad, doneAt:nowISO(), via:"fait"});
+    if(c.list === "Fait" && idsAvant.has(c.id) && !faitAvant.has(c.id) && !dejaVues.has(c.id)){
+      state.log.push({id:c.id, name:c.name.slice(0,80), quad:c.quad, doneAt:nowISO(), via:"fait"});
       dejaVues.add(c.id); changed = true;
     }
   });
 
-  const snapAfter = {};
-  cards.forEach(c => { snapAfter[c.id] = c.list; });
-  const ids = new Set(cards.map(c => c.id));
+  // Disparue des cartes ouvertes : archivée dans Trello. Elle quitte la
+  // matrice, mais laisse une trace. Son nom et son quadrant sont demandés à
+  // Trello maintenant, ce qui évite de les recopier en permanence pour toutes
+  // les cartes. Quelques appels par session au maximum.
+  const disparues = [...idsAvant].filter(id => !ids.has(id) && !dejaVues.has(id));
+  for(const id of disparues.slice(0, 25)){
+    let nom = "(carte retirée du tableau)", quad = state.q1since[id] ? 1 : 0;
+    try{
+      const c = await api(`/cards/${id}`, "GET", "fields=name,idLabels");
+      if(c){ nom = (c.name || nom).slice(0,80); quad = quadOf(c.idLabels || []) || quad; }
+    }catch(e){ nom = "(carte supprimée)"; }
+    state.log.push({id, name:nom, quad, doneAt:nowISO(), via:"archive"});
+    dejaVues.add(id); changed = true;
+  }
+  if(disparues.length) changed = true;
 
-  // Disparues des cartes ouvertes : archivées dans Trello. Elles quittent la
-  // matrice, mais laissent une trace de leur passage et de leur quadrant.
-  Object.keys(snapBefore).forEach(id => {
-    if(ids.has(id)) return;
-    if(!dejaVues.has(id)){
-      state.log.push({
-        id,
-        name:(state.noms && state.noms[id]) || "(carte archivée)",
-        quad: state.q1since[id] ? 1 : (state.quads && state.quads[id]) || 0,
-        doneAt: nowISO(), via:"archive"
-      });
-      dejaVues.add(id);
-    }
-    changed = true;
-  });
-
-  state.noms = {}; state.quads = {};
-  cards.forEach(c => { state.noms[c.id] = c.name; state.quads[c.id] = c.quad; });
-
-  if(JSON.stringify(snapAfter) !== JSON.stringify(snapBefore)) changed = true;
-  state.snapshot = snapAfter;
+  const faitApres = cards.filter(c => c.list === "Fait").map(c => c.id);
+  const idsApres = [...ids];
+  if(JSON.stringify(faitApres) !== JSON.stringify(state.fait || [])){ state.fait = faitApres; changed = true; }
+  if(JSON.stringify(idsApres) !== JSON.stringify(state.ids || [])){ state.ids = idsApres; changed = true; }
 
   Object.keys(state.q1since).forEach(id => { if(!ids.has(id)){ delete state.q1since[id]; changed = true; } });
   cards.forEach(c => {
@@ -718,7 +746,8 @@ function trackHistory(){
   });
 
   const cutoff = Date.now() - RETENTION_J*86400000;
-  const pruned = state.log.filter(e => new Date(e.doneAt).getTime() >= cutoff);
+  const pruned = state.log.filter(e => new Date(e.doneAt).getTime() >= cutoff)
+    .sort((a,b) => (a.doneAt < b.doneAt ? 1 : -1)).slice(0, LOG_MAX);
   if(pruned.length !== state.log.length){ state.log = pruned; changed = true; }
 
   if(changed) writeState();
