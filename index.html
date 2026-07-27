@@ -177,19 +177,33 @@ const QUADS = [
   {q:4, name:"Q4 Laisser tomber",   color:"black"}
 ];
 const LS = "matrice-trello-auth";
-// Ces trois clés vivent uniquement dans ce navigateur : Trello n'a aucune
-// notion de "depuis quand une carte est en Q1" ni d'historique de complétion
-// par quadrant, donc c'est cette page qui les observe et les mémorise au fil
-// des chargements. Les données ne remontent qu'à partir du jour où la page
-// tourne pour la première fois avec ce code : aucune reconstitution rétroactive.
-const Q1_KEY = "matrice-q1-since";
-const SNAP_KEY = "matrice-list-snapshot";
-const LOG_KEY = "matrice-weekly-log";
+
+/* La mémoire de l'outil (date d'entrée en Q1, journal des cartes terminées)
+   n'existe pas nativement dans Trello. La reconstituer en interrogeant
+   l'historique de chaque carte coûterait un appel réseau par carte.
+
+   Elle est donc écrite au fil de l'eau dans la description d'UNE carte
+   dédiée, archivée pour ne jamais encombrer le tableau. Lecture : un appel.
+   Écriture : un appel, et seulement quand quelque chose a changé. La mémoire
+   suit donc le compte Trello, pas le navigateur, et fonctionne depuis
+   n'importe quel poste.
+
+   Le stockage local ne sert plus que de copie de secours, si Trello refuse
+   momentanément l'écriture. */
+const STATE_CARD_NAME = "Matrice Urgence x Impact — mémoire de l'outil (ne pas supprimer)";
+const STATE_ID_KEY = "matrice-state-card-id";
+const STATE_CACHE_KEY = "matrice-state-cache";
+const MARK_START = "<!--MATRICE_DATA";
+const MARK_END = "MATRICE_DATA-->";
+
 const SEUIL_Q1 = 7;      // au-delà, on prévient que Q1 déborde
 const SEUIL_STALE = 14;  // jours en Q1 avant d'attirer l'attention
+const RETENTION_J = 60;  // on ne garde pas le journal indéfiniment
 
-let auth = null, cards = [], labelIds = {}, lists = [], q1since = {};
-let triageState = null;
+let auth = null, cards = [], labelIds = {}, lists = [], triageState = null;
+// état partagé, tel que stocké dans Trello
+let state = {q1since:{}, log:[], snapshot:{}};
+let stateCardId = null;
 
 /* ---------- accès Trello ---------- */
 function authorizeUrl(){
@@ -218,10 +232,127 @@ async function api(path, method="GET", params=""){
   return txt ? JSON.parse(txt) : null;
 }
 
-/* ---------- petit stockage local ---------- */
+/* ---------- petit stockage local (copie de secours seulement) ---------- */
 function nowISO(){ return new Date().toISOString(); }
 function loadJSON(key, fallback){ try{ const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }catch(e){ return fallback; } }
 function saveJSON(key, obj){ localStorage.setItem(key, JSON.stringify(obj)); }
+
+/* ---------- mémoire partagée, stockée dans une carte Trello archivée ---------- */
+function emptyState(){ return {q1since:{}, log:[], snapshot:{}}; }
+
+function encodeState(st){
+  // La description reste lisible par un humain qui ouvrirait la carte par
+  // curiosité : une explication en clair, puis les données dans un commentaire
+  // HTML que Trello n'affiche pas en mode rendu.
+  return [
+    "Cette carte est la mémoire de la Matrice Urgence x Impact.",
+    "",
+    "Elle retient depuis quand chaque carte est en Q1, et quelles cartes ont été",
+    "terminées, informations que Trello ne conserve pas de façon exploitable.",
+    "Elle est archivée volontairement : elle n'a pas à apparaître sur le tableau.",
+    "",
+    "Ne pas supprimer, ne pas modifier à la main. L'outil la réécrit tout seul.",
+    "",
+    MARK_START,
+    JSON.stringify(st),
+    MARK_END
+  ].join("\n");
+}
+function decodeState(desc){
+  if(!desc) return emptyState();
+  const i = desc.indexOf(MARK_START), j = desc.indexOf(MARK_END);
+  if(i === -1 || j === -1 || j < i) return emptyState();
+  try{
+    const parsed = JSON.parse(desc.slice(i + MARK_START.length, j).trim());
+    return {
+      q1since: parsed.q1since || {},
+      log: Array.isArray(parsed.log) ? parsed.log : [],
+      snapshot: parsed.snapshot || {}
+    };
+  }catch(e){ return emptyState(); }
+}
+
+// Retrouve la carte mémoire, ou la crée. L'identifiant est mis en cache
+// localement pour éviter la recherche à chaque chargement, mais un poste qui
+// ne l'a pas la retrouve tout seul par son nom : rien n'est perdu.
+async function findOrCreateStateCard(){
+  const cached = localStorage.getItem(STATE_ID_KEY);
+  if(cached){
+    try{
+      const c = await api(`/cards/${cached}`, "GET", "fields=id,name,desc");
+      if(c && c.id) return c;
+    }catch(e){ /* carte supprimée ou identifiant périmé : on rebascule sur la recherche */ }
+  }
+  // La carte étant archivée, elle n'apparaît pas dans les cartes ouvertes.
+  const closed = await api(`/boards/${BOARD}/cards/closed`, "GET", "fields=id,name,desc");
+  const hit = (closed || []).find(c => c.name === STATE_CARD_NAME);
+  if(hit){ localStorage.setItem(STATE_ID_KEY, hit.id); return hit; }
+
+  setStatus("Création de la carte mémoire…");
+  const listId = (lists[0] || {}).id;
+  const made = await api(`/cards`, "POST",
+    `idList=${listId}&name=${encodeURIComponent(STATE_CARD_NAME)}&desc=${encodeURIComponent(encodeState(emptyState()))}`);
+  await api(`/cards/${made.id}`, "PUT", "closed=true"); // archivée aussitôt
+  localStorage.setItem(STATE_ID_KEY, made.id);
+  return made;
+}
+
+async function readState(){
+  try{
+    const card = await findOrCreateStateCard();
+    stateCardId = card.id;
+    const st = decodeState(card.desc);
+    saveJSON(STATE_CACHE_KEY, st);   // copie de secours
+    return st;
+  }catch(e){
+    // Trello injoignable : on continue avec la dernière copie connue plutôt
+    // que de perdre l'affichage. L'écriture retentera au prochain changement.
+    showError("Mémoire partagée illisible, utilisation de la copie locale : " + e.message);
+    return loadJSON(STATE_CACHE_KEY, emptyState());
+  }
+}
+
+let writeChain = Promise.resolve();
+function writeState(){
+  // Les écritures s'enchaînent une par une : deux changements rapprochés ne
+  // peuvent pas s'écraser mutuellement. Chacune relit la version distante
+  // avant d'écrire, pour ne pas perdre ce qu'un autre poste aurait ajouté.
+  saveJSON(STATE_CACHE_KEY, state);
+  writeChain = writeChain.then(async () => {
+    if(!stateCardId) return;
+    try{
+      const remote = decodeState((await api(`/cards/${stateCardId}`, "GET", "fields=desc")).desc);
+      const merged = mergeStates(remote, state);
+      state = merged;
+      saveJSON(STATE_CACHE_KEY, merged);
+      await api(`/cards/${stateCardId}`, "PUT", `desc=${encodeURIComponent(encodeState(merged))}`);
+    }catch(e){
+      showError("La mémoire n'a pas pu être enregistrée dans Trello (le classement, lui, est bien enregistré) : " + e.message);
+    }
+  }).catch(() => {});
+  return writeChain;
+}
+
+// Fusion de deux versions de la mémoire : on ne perd jamais une entrée de
+// journal, et pour une même carte on garde la date d'entrée en Q1 la plus
+// ancienne, celle qui dit la vérité sur l'ancienneté.
+function mergeStates(a, b){
+  const q1since = {...a.q1since};
+  Object.entries(b.q1since || {}).forEach(([id, ts]) => {
+    q1since[id] = (q1since[id] && q1since[id] < ts) ? q1since[id] : ts;
+  });
+  const seen = new Set(), log = [];
+  [...(a.log || []), ...(b.log || [])].forEach(e => {
+    const k = e.id + "|" + e.doneAt;
+    if(!seen.has(k)){ seen.add(k); log.push(e); }
+  });
+  const cutoff = Date.now() - RETENTION_J * 86400000;
+  return {
+    q1since,
+    log: log.filter(e => new Date(e.doneAt).getTime() >= cutoff),
+    snapshot: {...a.snapshot, ...b.snapshot}
+  };
+}
 
 /* ---------- démarrage ---------- */
 const $ = s => document.querySelector(s);
@@ -273,6 +404,7 @@ async function load(){
       id:c.id, name:c.name, list:byList[c.idList] || "?", due:c.due, dueComplete:c.dueComplete,
       url:c.shortUrl, labels:c.idLabels || [], quad:quadOf(c.idLabels || [])
     }));
+    state = await readState();   // un seul appel, quel que soit le nombre de cartes
     trackHistory();
     const sel = $("#listfilter"), prev = sel.value;
     sel.innerHTML = `<option value="">Toutes les listes</option>` +
@@ -304,42 +436,44 @@ function quadOf(ids){
   return 0;
 }
 
-/* ---------- historique local : complétions et ancienneté en Q1 ----------
-   Trello ne garde pas nativement "depuis quand cette étiquette est posée" de
-   façon consultable sans un appel par carte (trop lent avec ~120 cartes).
-   Cette page observe donc elle-même, à chaque chargement, ce qui a changé
-   depuis le chargement précédent : une carte qui bascule vers la liste Fait
-   devient un point du bilan hebdo ; une carte qui entre en Q1 est datée. */
+/* ---------- suivi de l'historique ----------
+   Comparaison entre l'état vu au chargement précédent (mémorisé dans la carte
+   mémoire, donc partagé entre postes) et l'état actuel : une carte qui bascule
+   vers la liste Fait devient un point du bilan ; une carte entrée en Q1 est
+   datée. Le classement fait depuis un autre poste, ou directement dans Trello
+   à la main, est donc rattrapé ici. */
 function trackHistory(){
-  const snapBefore = loadJSON(SNAP_KEY, {});
-  const log = loadJSON(LOG_KEY, []);
+  const snapBefore = state.snapshot || {};
   let changed = false;
+
   cards.forEach(c => {
     const prevList = snapBefore[c.id];
     if(prevList && prevList !== "Fait" && c.list === "Fait"){
-      log.push({id:c.id, name:c.name, quad:c.quad, doneAt: nowISO()});
+      state.log.push({id:c.id, name:c.name, quad:c.quad, doneAt: nowISO()});
       changed = true;
     }
   });
-  if(changed){
-    const cutoff = Date.now() - 60*86400000;
-    saveJSON(LOG_KEY, log.filter(e => new Date(e.doneAt).getTime() >= cutoff));
-  } else {
-    saveJSON(LOG_KEY, log);
-  }
 
   const snapAfter = {};
   cards.forEach(c => { snapAfter[c.id] = c.list; });
-  saveJSON(SNAP_KEY, snapAfter);
+  if(JSON.stringify(snapAfter) !== JSON.stringify(snapBefore)) changed = true;
+  state.snapshot = snapAfter;
 
-  q1since = loadJSON(Q1_KEY, {});
   const ids = new Set(cards.map(c => c.id));
-  Object.keys(q1since).forEach(id => { if(!ids.has(id)) delete q1since[id]; });
-  cards.forEach(c => {
-    if(c.quad === 1 && !q1since[c.id]) q1since[c.id] = nowISO();
-    if(c.quad !== 1 && q1since[c.id]) delete q1since[c.id];
+  Object.keys(state.q1since).forEach(id => {
+    if(!ids.has(id)){ delete state.q1since[id]; changed = true; }
   });
-  saveJSON(Q1_KEY, q1since);
+  cards.forEach(c => {
+    if(c.quad === 1 && !state.q1since[c.id]){ state.q1since[c.id] = nowISO(); changed = true; }
+    if(c.quad !== 1 && state.q1since[c.id]){ delete state.q1since[c.id]; changed = true; }
+  });
+
+  const cutoff = Date.now() - RETENTION_J * 86400000;
+  const pruned = state.log.filter(e => new Date(e.doneAt).getTime() >= cutoff);
+  if(pruned.length !== state.log.length){ state.log = pruned; changed = true; }
+
+  // Une seule écriture, et seulement si quelque chose a réellement bougé.
+  if(changed) writeState();
 }
 
 /* ---------- changement de quadrant, partagé glisser-déposer + tri éclair ---------- */
@@ -347,19 +481,18 @@ async function setQuad(card, newQuad){
   const before = card.quad;
   if(before === newQuad) return true;
   card.quad = newQuad;
-  if(newQuad === 1) q1since[card.id] = nowISO(); else delete q1since[card.id];
-  saveJSON(Q1_KEY, q1since);
+  if(newQuad === 1) state.q1since[card.id] = nowISO(); else delete state.q1since[card.id];
   render();
   setStatus("Enregistrement dans Trello…"); clearError();
   try{
     if(before) await api(`/cards/${card.id}/idLabels/${labelIds[before]}`, "DELETE");
     if(newQuad) await api(`/cards/${card.id}/idLabels`, "POST", `value=${labelIds[newQuad]}`);
+    writeState();   // la date d'entrée en Q1 part dans la mémoire partagée
     setStatus(`${cards.length} cartes, enregistré`);
     return true;
   }catch(err){
     card.quad = before;
-    if(before === 1) q1since[card.id] = q1since[card.id] || nowISO(); else delete q1since[card.id];
-    saveJSON(Q1_KEY, q1since);
+    if(before === 1) state.q1since[card.id] = state.q1since[card.id] || nowISO(); else delete state.q1since[card.id];
     render();
     showError("Trello a refusé le changement, la carte est remise où elle était : " + err.message);
     setStatus("");
@@ -381,8 +514,8 @@ function tile(c){
   el.className = "tile"; el.draggable = true; el.dataset.id = c.id;
   const d = dueLabel(c);
   let staleHtml = "";
-  if(c.quad === 1 && q1since[c.id]){
-    const days = Math.floor((Date.now() - new Date(q1since[c.id]).getTime()) / 86400000);
+  if(c.quad === 1 && state.q1since[c.id]){
+    const days = Math.floor((Date.now() - new Date(state.q1since[c.id]).getTime()) / 86400000);
     if(days >= SEUIL_STALE) staleHtml = `<span class="due late">⚠ ${days} j en Q1</span>`;
   }
   el.innerHTML = `<div>${esc(c.name)}</div><div class="meta">
@@ -563,7 +696,7 @@ $("#btnFocus").onclick = () => {
 /* ---------- bilan hebdo : lu depuis l'historique local, pas depuis Trello ---------- */
 $("#btnBilan").onclick = () => {
   const qName = {1:"Faire maintenant", 2:"Planifier", 3:"Expédier", 4:"Laisser tomber"};
-  const log = loadJSON(LOG_KEY, []);
+  const log = state.log || [];
   const cutoff = Date.now() - 7 * 86400000;
   const recent = log.filter(e => new Date(e.doneAt).getTime() >= cutoff);
   const counts = {0:0, 1:0, 2:0, 3:0, 4:0};
