@@ -219,9 +219,14 @@ main{display:grid;grid-template-columns:300px 1fr;overflow:hidden}
   display:flex;align-items:center;justify-content:center;color:var(--eteint)
 }
 .fiche:hover .ranger,.fiche:focus-within .ranger{border-color:var(--filet-fort);color:var(--encre)}
+/* Le menu vit sur le corps de page, en position fixe, et non dans la fiche :
+   les zones de quadrant ont leur propre défilement, et une liste de six
+   entrées s'y faisait couper par le bas. La dernière entrée, « Retirer du
+   classement », devenait alors invisible et donc incliquable. */
 .menu{
-  position:absolute;top:30px;right:6px;z-index:20;background:#fff;
-  border:1px solid var(--encre);padding:4px;display:flex;flex-direction:column;min-width:190px
+  position:fixed;z-index:90;background:#fff;
+  border:1px solid var(--encre);padding:4px;display:flex;flex-direction:column;
+  min-width:220px;box-shadow:4px 4px 0 rgba(20,17,15,.14)
 }
 .menu button,.menu a{
   border:none;text-align:left;text-transform:none;letter-spacing:0;font-size:13px;
@@ -1113,14 +1118,34 @@ function ouvrirMenu(ancre, c){
     + `<button data-q="0"><span class="puce" style="background:var(--filet-fort)"></span>Retirer du classement<span class="touche">0</span></button>`
     + `<div class="sep"></div>`
     + `<a href="${c.url}" target="_blank" rel="noopener">Ouvrir dans Trello ↗</a>`;
-  ancre.appendChild(m);
+  document.body.appendChild(m);
+
+  // Placement sous le bouton, rabattu vers le haut ou vers la gauche s'il
+  // n'y a pas la place. Mesuré après insertion, jamais supposé.
+  const b = ancre.querySelector(".ranger").getBoundingClientRect();
+  const h = m.offsetHeight, l = m.offsetWidth, marge = 8;
+  let haut = b.bottom + 2;
+  if(haut + h > window.innerHeight - marge) haut = Math.max(marge, b.top - h - 2);
+  let gauche = b.right - l;
+  if(gauche < marge) gauche = marge;
+  if(gauche + l > window.innerWidth - marge) gauche = Math.max(marge, window.innerWidth - marge - l);
+  m.style.top = haut + "px";
+  m.style.left = gauche + "px";
   m.querySelectorAll("button").forEach(b => {
     b.onclick = ev => { ev.stopPropagation(); fermerMenus(); setQuad(c, +b.dataset.q); };
   });
   m.querySelector("button").focus();
 }
 function fermerMenus(){ document.querySelectorAll(".menu").forEach(m => m.remove()); }
-document.addEventListener("click", e => { if(!e.target.closest(".menu,.ranger")) fermerMenus(); });
+document.addEventListener("click", e => {
+  const c = e.target instanceof Element ? e.target : null;
+  if(!c || !c.closest(".menu,.ranger")) fermerMenus();
+});
+// En position fixe, le menu ne suit pas le défilement de la zone : on le ferme
+// plutôt que de le laisser flotter à côté de sa carte.
+window.addEventListener("resize", fermerMenus);
+document.addEventListener("scroll", fermerMenus, true);
+document.addEventListener("keydown", e => { if(e.key === "Escape") fermerMenus(); });
 
 // Les compteurs montent depuis zéro à l'arrivée : le tableau se construit
 // sous les yeux au lieu d'apparaître d'un bloc. Aucun chiffre inventé, c'est
