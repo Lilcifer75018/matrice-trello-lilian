@@ -964,7 +964,26 @@ function ouvrirMenu(ancre, c){
 function fermerMenus(){ document.querySelectorAll(".menu").forEach(m => m.remove()); }
 document.addEventListener("click", e => { if(!e.target.closest(".menu,.ranger")) fermerMenus(); });
 
+// Les compteurs montent depuis zéro à l'arrivée : le tableau se construit
+// sous les yeux au lieu d'apparaître d'un bloc. Aucun chiffre inventé, c'est
+// la vraie valeur qui est atteinte.
+function compterJusqua(el, valeur){
+  if(!el) return;
+  if(!valeur || window.matchMedia("(prefers-reduced-motion: reduce)").matches){
+    el.textContent = valeur || ""; return;
+  }
+  const duree = 520, debut = performance.now();
+  const pas = t => {
+    const p = Math.min(1, (t - debut)/duree);
+    const doux = 1 - Math.pow(1 - p, 3);          // ralentit en fin de course
+    el.textContent = Math.round(valeur * doux);
+    if(p < 1) requestAnimationFrame(pas); else el.textContent = valeur;
+  };
+  requestAnimationFrame(pas);
+}
+
 function render(){
+  const arrivee = premierRendu;
   const terme = $("#search").value.trim().toLowerCase();
   const liste = $("#listfilter").value;
   const vues = cards.filter(c => (!terme || c.name.toLowerCase().includes(terme)) && (!liste || c.list === liste));
@@ -982,12 +1001,24 @@ function render(){
       v.textContent = q === 0 ? "Le tas est vide. Tout a trouvé sa place." : "Rien ici pour l'instant.";
       z.appendChild(v);
     } else items.forEach((c, i) => z.appendChild(fiche(c, i)));
-    if(q > 0) document.querySelector(`#q${q} .nb`).textContent = items.length || "";
+    if(q > 0){
+      const nb = document.querySelector(`#q${q} .nb`);
+      if(arrivee) compterJusqua(nb, items.length);
+      else nb.textContent = items.length || "";
+    }
   });
 
   const aPlacer = vues.filter(c => c.quad === 0).length;
   const vide = aPlacer === 0 && cards.length > 0;
-  $("#poolnb").textContent = aPlacer;
+
+  // Le titre de l'onglet dit ce qui reste : le rappel le plus discret qui
+  // soit, sans notification ni relance.
+  const aPlacerReel = cards.filter(c => c.quad === 0).length;
+  document.title = aPlacerReel
+    ? `${aPlacerReel} à trier · Matrice Urgence × Impact`
+    : "Matrice Urgence × Impact — tout est trié";
+  // le zéro s'affiche tel quel : c'est un résultat, pas une absence
+  if(arrivee && aPlacer) compterJusqua($("#poolnb"), aPlacer); else $("#poolnb").textContent = aPlacer;
   $("#poolnb").classList.toggle("zero", vide);
   $("#poolhead").classList.toggle("zero", vide);
   $("#poolsub").classList.toggle("zero", vide);
@@ -1006,7 +1037,7 @@ function render(){
   const bt = $("#btnTriage");
   bt.disabled = aPlacer === 0;
   bt.innerHTML = aPlacer === 0 ? "Tout est trié" : `Tri éclair <span class="btn-compte">${aPlacer}</span>`;
-  bt.title = aPlacer === 0 ? "Plus aucune carte à trier" : `${aPlacer} carte(s) à passer en revue`;
+  bt.title = aPlacer === 0 ? "Plus aucune carte à trier" : `${aPlacer} carte(s) à passer en revue (raccourci : T)`;
 
   // L'alerte porte sur le vrai total, pas sur ce que le filtre laisse voir.
   const q1Total = cards.filter(c => c.quad === 1).length;
@@ -1044,6 +1075,20 @@ function fermerScene(){ $("#scene").hidden = true; $("#sceneCorps").innerHTML = 
 $("#sceneClose").onclick = fermerScene;
 document.addEventListener("keydown", e => {
   if(e.key === "z" && (e.ctrlKey || e.metaKey)){ e.preventDefault(); $("#btnUndo").click(); return; }
+
+  // T lance le tri éclair de n'importe où. Neutralisé pendant la saisie d'un
+  // champ et quand une fiche a le focus, où les touches 1 à 4 gouvernent.
+  // e.target n'est pas toujours un élément (document, fenêtre) : on ne peut
+  // pas l'interroger sans garde, sinon le raccourci ne part jamais.
+  const cible = e.target instanceof Element ? e.target : null;
+  const saisie = cible && (cible.matches("input, select, textarea") || cible.closest(".fiche"));
+  if(e.key.toLowerCase() === "t" && !e.ctrlKey && !e.metaKey && !e.altKey && !saisie
+     && $("#scene").hidden && $("#app").style.display === "grid"){
+    e.preventDefault();
+    if(!$("#btnTriage").disabled) $("#btnTriage").click();
+    return;
+  }
+
   if($("#scene").hidden) return;
   if(e.key === "Escape"){ fermerScene(); return; }
   if(triageState){
