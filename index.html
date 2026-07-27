@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Matrice Urgence × Impact — FREELANCE Pilotage</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f7f5f1; --ink:#14110f; --muted:#6b635c; --line:#ddd6cc; --card:#fffdfa;
+  --q1:#c8452f; --q2:#2f6b4f; --q3:#b4791f; --q4:#78706a;
+  --accent:#14110f;
+  --sans:"Bricolage Grotesque",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --serif:"Newsreader",Georgia,serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#14110f;--ink:#f2ede6;--muted:#a09890;--line:#332e29;--card:#1d1916;
+        --q1:#e4705a;--q2:#5fa37e;--q3:#d6a248;--q4:#9a938c;--accent:#f2ede6;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.45}
+button{font-family:inherit;font-size:14px;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:7px;padding:7px 13px}
+button:hover{border-color:var(--accent)}
+.primary{background:var(--accent);color:var(--bg);border:1px solid var(--accent);border-radius:7px;padding:9px 16px;font-weight:600;text-decoration:none;display:inline-block;cursor:pointer}
+input,select{font-family:inherit;font-size:14px;padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:var(--card);color:var(--ink);width:100%}
+a{color:inherit}
+
+/* ---------- Écran de connexion ---------- */
+#setup{max-width:620px;margin:8vh auto;padding:0 24px}
+#setup h1{font-family:var(--serif);font-weight:500;font-size:32px;margin:0 0 6px}
+#setup p{color:var(--muted);font-size:14.5px}
+#setup ol{color:var(--muted);font-size:14.5px;padding-left:20px}
+#setup li{margin:7px 0}
+.field{margin:14px 0}
+.field label{display:block;font-size:13px;font-weight:600;margin-bottom:5px}
+.note{font-size:13px;color:var(--muted);border-left:2px solid var(--line);padding-left:12px;margin-top:22px}
+
+/* ---------- Application ---------- */
+#app{display:none;height:100vh;grid-template-rows:auto 1fr;overflow:hidden}
+header{display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+header h1{font-family:var(--serif);font-weight:500;font-size:19px;margin:0 8px 0 0;white-space:nowrap}
+header .spacer{flex:1}
+header .actions{display:flex;gap:8px;flex-wrap:wrap}
+#status{font-size:13px;color:var(--muted)}
+main{display:grid;grid-template-columns:320px 1fr;overflow:hidden}
+
+#pool{border-right:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden}
+#poolhead{padding:12px 14px 10px;border-bottom:1px solid var(--line);display:grid;gap:8px}
+#poolhead .row{display:flex;gap:8px;align-items:center}
+#poolcount{font-size:13px;color:var(--muted)}
+#poollist{overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:7px;flex:1}
+
+.grid{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:1px;background:var(--line);overflow:hidden}
+.quad{background:var(--bg);display:flex;flex-direction:column;overflow:hidden}
+.quad > h2{margin:0;padding:11px 14px 9px;font-size:14px;font-weight:700;display:flex;align-items:baseline;gap:8px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.quad > h2 .sub{font-family:var(--serif);font-style:italic;font-weight:400;font-size:13px;color:var(--muted)}
+.quad > h2 .n{margin-left:auto;font-size:12px;color:var(--muted);font-weight:400}
+.drop{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:7px}
+.drop.over{background:color-mix(in srgb,var(--accent) 7%,transparent);outline:2px dashed var(--accent);outline-offset:-6px}
+#q1 h2{color:var(--q1)} #q2 h2{color:var(--q2)} #q3 h2{color:var(--q3)} #q4 h2{color:var(--q4)}
+
+.warn{font-size:11px;font-weight:600;color:var(--q1);background:color-mix(in srgb, var(--q1) 14%, transparent);padding:2px 8px;border-radius:20px;white-space:nowrap}
+
+.tile{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--line);border-radius:7px;padding:9px 11px;cursor:grab;font-size:13.5px}
+.tile:active{cursor:grabbing}
+.tile.dragging{opacity:.4}
+.tile .meta{margin-top:5px;font-size:11.5px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tile .due{font-weight:600}
+.tile .due.late{color:var(--q1)}
+.tile .open{margin-left:auto;text-decoration:none;opacity:.55}
+.tile .open:hover{opacity:1}
+#q1 .drop .tile{border-left-color:var(--q1)} #q2 .drop .tile{border-left-color:var(--q2)}
+#q3 .drop .tile{border-left-color:var(--q3)} #q4 .drop .tile{border-left-color:var(--q4)}
+
+.empty{color:var(--muted);font-size:13px;font-family:var(--serif);font-style:italic;padding:14px 4px}
+.err{background:var(--q1);color:#fff;padding:9px 16px;font-size:13.5px}
+@media (max-width:900px){
+  main{grid-template-columns:1fr;grid-template-rows:auto 1fr;overflow-y:auto}
+  #pool{border-right:none;border-bottom:1px solid var(--line);max-height:38vh}
+  .grid{grid-template-columns:1fr;grid-template-rows:none}
+  .quad{min-height:230px}
+}
+
+/* ---------- Fenêtres (tri éclair, focus, bilan) ---------- */
+.overlay{position:fixed;inset:0;background:rgba(20,17,15,.5);z-index:50;padding:20px}
+.overlay:not([hidden]){display:flex;align-items:center;justify-content:center}
+.modal{background:var(--card);border:1px solid var(--line);border-radius:12px;max-width:480px;width:100%;max-height:85vh;overflow-y:auto;padding:24px 26px;position:relative}
+.modal h3{font-family:var(--serif);font-weight:500;font-size:22px;margin:0 0 4px}
+.modal .close{position:absolute;top:12px;right:12px;border:none;background:none;font-size:17px;color:var(--muted);padding:6px 9px;line-height:1}
+.modal .close:hover{color:var(--ink)}
+.modal .step{color:var(--muted);font-size:13px;margin-bottom:12px}
+.bigchoice{display:flex;gap:10px;margin-top:16px}
+.bigchoice button{flex:1;padding:15px;font-size:15px;font-weight:600}
+.bigchoice button.yes{border-color:var(--q2);color:var(--q2)}
+.bigchoice button.no{border-color:var(--muted);color:var(--muted)}
+.triagecard{border:1px solid var(--line);border-radius:9px;padding:14px 16px;margin:14px 0;background:var(--bg)}
+.triagecard .name{font-size:15px;margin-bottom:5px}
+.triagecard .meta{font-size:12.5px;color:var(--muted)}
+.qprompt{font-weight:600;margin:0}
+.skiprow{margin-top:12px;text-align:center}
+.skiprow button{border:none;background:none;color:var(--muted);font-size:12.5px;text-decoration:underline;padding:4px}
+.kbdhint{font-size:11.5px;color:var(--muted);text-align:center;margin-top:10px}
+.focusitem{border-left:3px solid var(--line);padding:9px 12px;margin:10px 0;border-radius:6px;background:var(--bg)}
+.focusitem .qtag{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:2px}
+.focusitem .meta{font-size:12px;color:var(--muted);margin-top:4px;display:flex;gap:6px;align-items:center}
+.bilanrow{display:flex;align-items:center;gap:10px;margin:10px 0;font-size:13.5px}
+.bilanrow .dot{width:10px;height:10px;border-radius:50%;flex:none}
+.bilanrow .label{width:118px;flex:none}
+.bilanrow .bar{flex:1;height:8px;border-radius:4px;background:var(--line);overflow:hidden}
+.bilanrow .bar > i{display:block;height:100%;border-radius:4px}
+.bilanrow .num{width:24px;text-align:right;font-variant-numeric:tabular-nums;color:var(--muted);flex:none}
+.bilancomment{font-family:var(--serif);font-style:italic;color:var(--muted);margin-top:16px;font-size:14.5px;line-height:1.5}
+</style>
+</head>
+<body>
+
+<section id="setup">
+  <h1>Matrice Urgence × Impact</h1>
+  <p>Tableau <strong>FREELANCE — Pilotage</strong>. Cette page lit tes cartes Trello en direct et écrit le quadrant que tu choisis.</p>
+  <div class="field"><a class="primary" id="connect" href="#">Se connecter avec Trello</a></div>
+  <p class="note">Un clic, tu arrives sur une vraie page Trello où tu autorises l'accès depuis ton propre compte. Le jeton reste ensuite dans ce navigateur : chaque nouvel ordinateur ou navigateur redemande cette connexion une fois, puis reste connecté. Pour révoquer l'accès, va dans les paramètres Trello, section Applications autorisées.</p>
+</section>
+
+<div id="app">
+  <header>
+    <h1>Urgence × Impact business</h1>
+    <select id="listfilter" style="width:auto;min-width:170px"></select>
+    <input id="search" placeholder="Filtrer par mot" style="width:180px">
+    <div class="actions">
+      <button id="btnTriage">Tri éclair</button>
+      <button id="btnFocus">Je fais quoi ?</button>
+      <button id="btnBilan">Bilan</button>
+    </div>
+    <span class="spacer"></span>
+    <span id="status"></span>
+    <button id="reload">Recharger</button>
+    <button id="logout">Déconnecter</button>
+  </header>
+  <main>
+    <aside id="pool">
+      <div id="poolhead">
+        <strong style="font-size:14px">À placer</strong>
+        <span id="poolcount"></span>
+      </div>
+      <div id="poollist" class="drop" data-q="0"></div>
+    </aside>
+    <div class="grid">
+      <section class="quad" id="q1"><h2>Faire maintenant <span class="sub">urgent, fort impact</span><span class="warn" id="q1warn" hidden></span><span class="n"></span></h2><div class="drop" data-q="1"></div></section>
+      <section class="quad" id="q2"><h2>Planifier <span class="sub">fort impact, pas urgent</span><span class="n"></span></h2><div class="drop" data-q="2"></div></section>
+      <section class="quad" id="q3"><h2>Expédier <span class="sub">urgent, faible impact</span><span class="n"></span></h2><div class="drop" data-q="3"></div></section>
+      <section class="quad" id="q4"><h2>Laisser tomber <span class="sub">ni urgent, ni fort impact</span><span class="n"></span></h2><div class="drop" data-q="4"></div></section>
+    </div>
+  </main>
+</div>
+
+<div id="overlay" class="overlay" hidden>
+  <div class="modal" id="modalBody" role="dialog" aria-modal="true"></div>
+</div>
+
+<script>
+const BOARD = "6a65ea9554b832c94cc759a9";
+// Clé API Trello : identifiant public de l'application, pas un secret (Trello
+// la traite comme un client_id OAuth). Le vrai secret, c'est le jeton obtenu
+// via /1/authorize ci-dessous, qui n'est jamais tapé ni stocké ailleurs que
+// dans le navigateur de la personne qui clique "Se connecter".
+const TRELLO_KEY = "5b24411eb28ffe4530bbd50d7753a8e7";
+// Couleurs choisies pour ne PAS entrer en collision avec les étiquettes
+// thématiques du tableau (Acquisition rouge, Business jaune, Juliette verte,
+// Contenu orange, Système violet). Sur le devant d'une carte, le quadrant doit
+// se lire d'un coup d'oeil sans se confondre avec le thème.
+const QUADS = [
+  {q:1, name:"Q1 Faire maintenant", color:"pink"},
+  {q:2, name:"Q2 Planifier",        color:"sky"},
+  {q:3, name:"Q3 Expédier",         color:"lime"},
+  {q:4, name:"Q4 Laisser tomber",   color:"black"}
+];
+const LS = "matrice-trello-auth";
+// Ces trois clés vivent uniquement dans ce navigateur : Trello n'a aucune
+// notion de "depuis quand une carte est en Q1" ni d'historique de complétion
+// par quadrant, donc c'est cette page qui les observe et les mémorise au fil
+// des chargements. Les données ne remontent qu'à partir du jour où la page
+// tourne pour la première fois avec ce code : aucune reconstitution rétroactive.
+const Q1_KEY = "matrice-q1-since";
+const SNAP_KEY = "matrice-list-snapshot";
+const LOG_KEY = "matrice-weekly-log";
+const SEUIL_Q1 = 7;      // au-delà, on prévient que Q1 déborde
+const SEUIL_STALE = 14;  // jours en Q1 avant d'attirer l'attention
+
+let auth = null, cards = [], labelIds = {}, lists = [], q1since = {};
+let triageState = null;
+
+/* ---------- accès Trello ---------- */
+function authorizeUrl(){
+  // Flux "implicit token" de Trello : Trello gère le login sur son propre
+  // domaine et renvoie ici avec #token=... dans l'URL. Ce fragment (après le
+  // #) n'est jamais envoyé à un serveur, ni celui de Trello ni un hébergeur
+  // intermédiaire : il reste côté navigateur, lu uniquement par ce script.
+  const returnUrl = location.origin + location.pathname;
+  const params = new URLSearchParams({
+    expiration: "never",
+    scope: "read,write",
+    response_type: "token",
+    name: "Matrice Urgence x Impact",
+    key: TRELLO_KEY,
+    return_url: returnUrl
+  });
+  return `https://trello.com/1/authorize?${params.toString()}`;
+}
+function creds(){ return `key=${encodeURIComponent(auth.key)}&token=${encodeURIComponent(auth.token)}`; }
+async function api(path, method="GET", params=""){
+  const sep = path.includes("?") ? "&" : "?";
+  const url = `https://api.trello.com/1${path}${sep}${creds()}${params?"&"+params:""}`;
+  const r = await fetch(url, {method});
+  if(!r.ok) throw new Error(`Trello ${r.status} sur ${path} : ${(await r.text()).slice(0,140)}`);
+  const txt = await r.text();
+  return txt ? JSON.parse(txt) : null;
+}
+
+/* ---------- petit stockage local ---------- */
+function nowISO(){ return new Date().toISOString(); }
+function loadJSON(key, fallback){ try{ const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }catch(e){ return fallback; } }
+function saveJSON(key, obj){ localStorage.setItem(key, JSON.stringify(obj)); }
+
+/* ---------- démarrage ---------- */
+const $ = s => document.querySelector(s);
+function setStatus(m){ $("#status").textContent = m || ""; }
+function showError(m){
+  let b = $("#errbar");
+  if(!b){ b = document.createElement("div"); b.id="errbar"; b.className="err"; $("#app").insertBefore(b, $("main")); }
+  b.textContent = m;
+}
+function clearError(){ const b = $("#errbar"); if(b) b.remove(); }
+
+$("#connect").href = authorizeUrl();
+$("#logout").onclick = () => { localStorage.removeItem(LS); location.reload(); };
+$("#reload").onclick = () => load();
+$("#search").oninput = render;
+$("#listfilter").onchange = render;
+
+(function boot(){
+  // Retour de Trello après clic sur "Se connecter" : le jeton arrive dans le
+  // fragment d'URL (#token=...), jamais dans l'historique serveur.
+  const m = /(?:^|[#&])token=([0-9a-f]+)/.exec(location.hash);
+  if(m){
+    auth = {key: TRELLO_KEY, token: m[1]};
+    localStorage.setItem(LS, JSON.stringify(auth));
+    history.replaceState(null, "", location.pathname + location.search);
+    start();
+    return;
+  }
+  const saved = localStorage.getItem(LS);
+  if(saved){ try{ auth = JSON.parse(saved); start(); }catch(e){} }
+})();
+
+async function start(){
+  $("#setup").style.display = "none";
+  $("#app").style.display = "grid";
+  await load();
+}
+
+/* ---------- chargement ---------- */
+async function load(){
+  clearError();
+  setStatus("Lecture du tableau…");
+  try{
+    await ensureLabels();
+    lists = await api(`/boards/${BOARD}/lists`, "GET", "fields=id,name");
+    const raw = await api(`/boards/${BOARD}/cards`, "GET", "fields=id,name,idList,due,dueComplete,shortUrl,idLabels&filter=open");
+    const byList = Object.fromEntries(lists.map(l => [l.id, l.name]));
+    cards = raw.map(c => ({
+      id:c.id, name:c.name, list:byList[c.idList] || "?", due:c.due, dueComplete:c.dueComplete,
+      url:c.shortUrl, labels:c.idLabels || [], quad:quadOf(c.idLabels || [])
+    }));
+    trackHistory();
+    const sel = $("#listfilter"), prev = sel.value;
+    sel.innerHTML = `<option value="">Toutes les listes</option>` +
+      lists.map(l => `<option>${esc(l.name)}</option>`).join("");
+    sel.value = prev || "";
+    setStatus(`${cards.length} cartes`);
+    render();
+  }catch(e){ showError(e.message); setStatus(""); }
+}
+
+async function ensureLabels(){
+  const existing = await api(`/boards/${BOARD}/labels`, "GET", "fields=id,name,color&limit=100");
+  for(const def of QUADS){
+    const hit = existing.find(l => l.name === def.name);
+    if(hit){
+      labelIds[def.q] = hit.id;
+      // Rattrape une étiquette créée avec l'ancienne couleur, sans la recréer :
+      // l'identifiant reste le même, les cartes déjà classées ne bougent pas.
+      if(hit.color !== def.color) await api(`/labels/${hit.id}`, "PUT", `color=${def.color}`);
+      continue;
+    }
+    setStatus(`Création de l'étiquette ${def.name}…`);
+    const made = await api(`/labels`, "POST", `idBoard=${BOARD}&name=${encodeURIComponent(def.name)}&color=${def.color}`);
+    labelIds[def.q] = made.id;
+  }
+}
+function quadOf(ids){
+  for(const def of QUADS) if(ids.includes(labelIds[def.q])) return def.q;
+  return 0;
+}
+
+/* ---------- historique local : complétions et ancienneté en Q1 ----------
+   Trello ne garde pas nativement "depuis quand cette étiquette est posée" de
+   façon consultable sans un appel par carte (trop lent avec ~120 cartes).
+   Cette page observe donc elle-même, à chaque chargement, ce qui a changé
+   depuis le chargement précédent : une carte qui bascule vers la liste Fait
+   devient un point du bilan hebdo ; une carte qui entre en Q1 est datée. */
+function trackHistory(){
+  const snapBefore = loadJSON(SNAP_KEY, {});
+  const log = loadJSON(LOG_KEY, []);
+  let changed = false;
+  cards.forEach(c => {
+    const prevList = snapBefore[c.id];
+    if(prevList && prevList !== "Fait" && c.list === "Fait"){
+      log.push({id:c.id, name:c.name, quad:c.quad, doneAt: nowISO()});
+      changed = true;
+    }
+  });
+  if(changed){
+    const cutoff = Date.now() - 60*86400000;
+    saveJSON(LOG_KEY, log.filter(e => new Date(e.doneAt).getTime() >= cutoff));
+  } else {
+    saveJSON(LOG_KEY, log);
+  }
+
+  const snapAfter = {};
+  cards.forEach(c => { snapAfter[c.id] = c.list; });
+  saveJSON(SNAP_KEY, snapAfter);
+
+  q1since = loadJSON(Q1_KEY, {});
+  const ids = new Set(cards.map(c => c.id));
+  Object.keys(q1since).forEach(id => { if(!ids.has(id)) delete q1since[id]; });
+  cards.forEach(c => {
+    if(c.quad === 1 && !q1since[c.id]) q1since[c.id] = nowISO();
+    if(c.quad !== 1 && q1since[c.id]) delete q1since[c.id];
+  });
+  saveJSON(Q1_KEY, q1since);
+}
+
+/* ---------- changement de quadrant, partagé glisser-déposer + tri éclair ---------- */
+async function setQuad(card, newQuad){
+  const before = card.quad;
+  if(before === newQuad) return true;
+  card.quad = newQuad;
+  if(newQuad === 1) q1since[card.id] = nowISO(); else delete q1since[card.id];
+  saveJSON(Q1_KEY, q1since);
+  render();
+  setStatus("Enregistrement dans Trello…"); clearError();
+  try{
+    if(before) await api(`/cards/${card.id}/idLabels/${labelIds[before]}`, "DELETE");
+    if(newQuad) await api(`/cards/${card.id}/idLabels`, "POST", `value=${labelIds[newQuad]}`);
+    setStatus(`${cards.length} cartes, enregistré`);
+    return true;
+  }catch(err){
+    card.quad = before;
+    if(before === 1) q1since[card.id] = q1since[card.id] || nowISO(); else delete q1since[card.id];
+    saveJSON(Q1_KEY, q1since);
+    render();
+    showError("Trello a refusé le changement, la carte est remise où elle était : " + err.message);
+    setStatus("");
+    return false;
+  }
+}
+
+/* ---------- affichage ---------- */
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function dueLabel(c){
+  if(!c.due) return null;
+  const d = new Date(c.due), now = new Date();
+  const days = Math.round((d - now)/86400000);
+  const txt = d.toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit"});
+  return {txt: days < 0 ? `${txt} (en retard)` : txt, late: days < 0 && !c.dueComplete};
+}
+function tile(c){
+  const el = document.createElement("div");
+  el.className = "tile"; el.draggable = true; el.dataset.id = c.id;
+  const d = dueLabel(c);
+  let staleHtml = "";
+  if(c.quad === 1 && q1since[c.id]){
+    const days = Math.floor((Date.now() - new Date(q1since[c.id]).getTime()) / 86400000);
+    if(days >= SEUIL_STALE) staleHtml = `<span class="due late">⚠ ${days} j en Q1</span>`;
+  }
+  el.innerHTML = `<div>${esc(c.name)}</div><div class="meta">
+      <span>${esc(c.list)}</span>
+      ${d ? `<span class="due${d.late?" late":""}">${esc(d.txt)}</span>` : ""}
+      ${staleHtml}
+      <a class="open" href="${c.url}" target="_blank" rel="noopener" title="Ouvrir dans Trello">↗</a></div>`;
+  el.addEventListener("dragstart", e => { e.dataTransfer.setData("text/plain", c.id); el.classList.add("dragging"); });
+  el.addEventListener("dragend", () => el.classList.remove("dragging"));
+  return el;
+}
+function render(){
+  const term = $("#search").value.trim().toLowerCase();
+  const listSel = $("#listfilter").value;
+  const shown = cards.filter(c =>
+    (!term || c.name.toLowerCase().includes(term)) && (!listSel || c.list === listSel));
+  document.querySelectorAll(".drop").forEach(z => {
+    const q = +z.dataset.q;
+    const items = shown.filter(c => c.quad === q);
+    z.innerHTML = "";
+    if(!items.length){
+      const e = document.createElement("div"); e.className = "empty";
+      e.textContent = q === 0 ? "Tout est placé." : "Glisse une carte ici.";
+      z.appendChild(e);
+    } else items.forEach(c => z.appendChild(tile(c)));
+    if(q > 0) document.querySelector(`#q${q} .n`).textContent = items.length || "";
+  });
+  $("#poolcount").textContent = `${shown.filter(c => c.quad === 0).length} carte(s) sans quadrant`;
+
+  // L'alerte "Q1 déborde" porte sur le vrai total, pas sur ce que le filtre
+  // ou la recherche laissent visible : un Q1 trop plein reste trop plein
+  // même quand on ne regarde qu'un mot-clé.
+  const q1Total = cards.filter(c => c.quad === 1).length;
+  const warn = $("#q1warn");
+  if(warn){
+    if(q1Total > SEUIL_Q1){ warn.hidden = false; warn.textContent = `déborde (${q1Total}) — tout n'est pas urgent`; }
+    else warn.hidden = true;
+  }
+}
+
+/* ---------- glisser-déposer ---------- */
+document.addEventListener("dragover", e => {
+  const z = e.target.closest(".drop"); if(!z) return;
+  e.preventDefault(); z.classList.add("over");
+});
+document.addEventListener("dragleave", e => {
+  const z = e.target.closest(".drop"); if(z) z.classList.remove("over");
+});
+document.addEventListener("drop", async e => {
+  const z = e.target.closest(".drop"); if(!z) return;
+  e.preventDefault(); z.classList.remove("over");
+  const id = e.dataTransfer.getData("text/plain");
+  const card = cards.find(c => c.id === id);
+  const target = +z.dataset.q;
+  if(!card) return;
+  await setQuad(card, target);
+});
+
+/* ---------- fenêtres modales ---------- */
+function openModal(html){
+  $("#modalBody").innerHTML = `<button class="close" id="modalClose" title="Fermer (Échap)">✕</button>` + html;
+  $("#overlay").hidden = false;
+  $("#modalClose").onclick = closeModal;
+}
+function closeModal(){
+  $("#overlay").hidden = true;
+  $("#modalBody").innerHTML = "";
+  triageState = null;
+}
+$("#overlay").addEventListener("click", e => { if(e.target.id === "overlay") closeModal(); });
+document.addEventListener("keydown", e => {
+  if($("#overlay").hidden) return;
+  if(e.key === "Escape"){ closeModal(); return; }
+  if(triageState){
+    const k = e.key.toLowerCase();
+    if(e.key === "ArrowRight" || k === "o"){ e.preventDefault(); answerTriage(true); }
+    else if(e.key === "ArrowLeft" || k === "n"){ e.preventDefault(); answerTriage(false); }
+  }
+});
+
+/* ---------- tri éclair : ne repasse que sur les cartes sans quadrant ---------- */
+$("#btnTriage").onclick = () => {
+  const queue = cards.filter(c => c.quad === 0).map(c => c.id);
+  if(!queue.length){
+    openModal(`<h3>Tri éclair</h3><p>Rien à trier, toutes les cartes ont déjà un quadrant.</p>`);
+    return;
+  }
+  triageState = {queue, index:0, step:"urgent"};
+  renderTriage();
+};
+function renderTriage(){
+  const st = triageState;
+  if(!st){ return; }
+  if(st.index >= st.queue.length){
+    openModal(`<h3>Tri éclair terminé</h3><p>${st.queue.length} carte(s) passée(s) en revue.</p>`);
+    triageState = null;
+    return;
+  }
+  const card = cards.find(c => c.id === st.queue[st.index]);
+  if(!card || card.quad !== 0){
+    // classée entretemps par un glisser-déposer pendant la séance : on saute
+    st.index++; renderTriage(); return;
+  }
+  const d = dueLabel(card);
+  const question = st.step === "urgent" ? "C'est urgent ?" : "Fort impact business ?";
+  openModal(`
+    <h3>Tri éclair</h3>
+    <div class="step">Carte ${st.index + 1} / ${st.queue.length}</div>
+    <div class="triagecard">
+      <div class="name">${esc(card.name)}</div>
+      <div class="meta">${esc(card.list)}${d ? " · échéance " + esc(d.txt) : " · sans échéance"}</div>
+    </div>
+    <p class="qprompt">${question}</p>
+    <div class="bigchoice">
+      <button class="no" id="triNo">Non</button>
+      <button class="yes" id="triYes">Oui</button>
+    </div>
+    <div class="skiprow"><button id="triSkip">Passer cette carte</button></div>
+    <div class="kbdhint">Raccourcis : O (oui) · N (non) · Échap pour arrêter</div>
+  `);
+  $("#triYes").onclick = () => answerTriage(true);
+  $("#triNo").onclick = () => answerTriage(false);
+  $("#triSkip").onclick = () => { st.index++; st.step = "urgent"; delete st.urgent; renderTriage(); };
+}
+async function answerTriage(yes){
+  const st = triageState; if(!st) return;
+  if(st.step === "urgent"){
+    st.urgent = yes; st.step = "impact"; renderTriage(); return;
+  }
+  const quad = st.urgent ? (yes ? 1 : 3) : (yes ? 2 : 4);
+  const card = cards.find(c => c.id === st.queue[st.index]);
+  if(card) await setQuad(card, quad);
+  st.index++; st.step = "urgent"; delete st.urgent;
+  renderTriage();
+}
+
+/* ---------- "je fais quoi là ?" : 3 cartes, calculées en local, pas d'appel réseau ---------- */
+$("#btnFocus").onclick = () => {
+  const qName = {1:"Faire maintenant", 2:"Planifier", 3:"Expédier", 4:"Laisser tomber"};
+  const scoreOf = c => {
+    if(c.quad === 0 || c.quad === 4) return null; // pas encore trié, ou volontairement laissé tomber
+    let base = c.quad === 1 ? 0 : c.quad === 3 ? 20 : 30; // Q1 < Q3 < Q2 par défaut
+    if(c.due){
+      const days = (new Date(c.due) - Date.now()) / 86400000;
+      base = days < 0 ? -100 + days : base + days; // en retard : toujours devant, peu importe le quadrant
+    } else base += 999; // sans échéance : après celles qui en ont, dans son groupe
+    return base;
+  };
+  const ranked = cards
+    .map(c => ({c, s: scoreOf(c)}))
+    .filter(x => x.s !== null)
+    .sort((a, b) => a.s - b.s)
+    .slice(0, 3)
+    .map(x => x.c);
+
+  const items = ranked.length
+    ? ranked.map(c => {
+        const d = dueLabel(c);
+        return `<div class="focusitem" style="border-left-color:var(--q${c.quad})">
+          <div class="qtag" style="color:var(--q${c.quad})">${qName[c.quad]}</div>
+          <div>${esc(c.name)}</div>
+          <div class="meta">${esc(c.list)}${d ? " · " + esc(d.txt) : ""}
+            <a class="open" href="${c.url}" target="_blank" rel="noopener">↗</a></div>
+        </div>`;
+      }).join("")
+    : `<p>Rien en attente en Q1, Q2 ou Q3.</p>`;
+
+  const untriaged = cards.filter(c => c.quad === 0).length;
+  const hint = untriaged
+    ? `<p style="font-size:13px;color:var(--muted);margin-top:16px">${untriaged} carte(s) pas encore triée(s), donc pas prises en compte ici.
+       <button id="focusToTriage" style="padding:4px 10px;font-size:12.5px;display:block;margin-top:8px">Lancer le tri éclair</button></p>`
+    : "";
+  openModal(`<h3>Je fais quoi là ?</h3>${items}${hint}`);
+  const btn = $("#focusToTriage");
+  if(btn) btn.onclick = () => { closeModal(); $("#btnTriage").click(); };
+};
+
+/* ---------- bilan hebdo : lu depuis l'historique local, pas depuis Trello ---------- */
+$("#btnBilan").onclick = () => {
+  const qName = {1:"Faire maintenant", 2:"Planifier", 3:"Expédier", 4:"Laisser tomber"};
+  const log = loadJSON(LOG_KEY, []);
+  const cutoff = Date.now() - 7 * 86400000;
+  const recent = log.filter(e => new Date(e.doneAt).getTime() >= cutoff);
+  const counts = {0:0, 1:0, 2:0, 3:0, 4:0};
+  recent.forEach(e => { counts[e.quad] = (counts[e.quad] || 0) + 1; });
+  const total = recent.length;
+
+  let body;
+  if(!total){
+    body = `<p>Aucune carte déplacée vers « Fait » ces 7 derniers jours (ou pas encore observée : le bilan ne compte qu'à partir du moment où cette page a tourné et vu le changement).</p>`;
+  } else {
+    const rows = [1, 2, 3, 4].map(q => {
+      const n = counts[q] || 0;
+      const pct = total ? Math.round(n / total * 100) : 0;
+      return `<div class="bilanrow">
+        <span class="dot" style="background:var(--q${q})"></span>
+        <span class="label">${qName[q]}</span>
+        <span class="bar"><i style="width:${pct}%;background:var(--q${q})"></i></span>
+        <span class="num">${n}</span>
+      </div>`;
+    }).join("");
+    const other = counts[0] || 0;
+    const otherLine = other
+      ? `<p style="font-size:12.5px;color:var(--muted);margin-top:10px">+ ${other} carte(s) terminée(s) sans être passée(s) par un quadrant.</p>`
+      : "";
+    const dominant = [1, 2, 3, 4].reduce((a, b) => (counts[b] || 0) > (counts[a] || 0) ? b : a, 1);
+    const comments = {
+      1: "Beaucoup de « faire maintenant » cette semaine : tu éteins des feux importants. Normal ponctuellement, à surveiller si ça dure.",
+      2: "Bon signe : l'important avance avant de devenir urgent.",
+      3: "Beaucoup d'urgent à faible impact : de l'expédition, pas forcément de la valeur.",
+      4: "Tu termines surtout des choses ni urgentes ni importantes : ça vaut le coup de se demander pourquoi elles étaient sur le tableau."
+    };
+    body = `<div class="step">${total} carte(s) terminée(s), 7 derniers jours</div>${rows}${otherLine}
+      <p class="bilancomment">${comments[dominant]}</p>`;
+  }
+
+  const earliest = log.length ? Math.min(...log.map(e => new Date(e.doneAt).getTime())) : null;
+  const young = earliest && (Date.now() - earliest) < 7 * 86400000;
+  const note = young
+    ? `<p style="font-size:12px;color:var(--muted);margin-top:14px">Historique encore court, les chiffres vont se stabiliser avec le temps.</p>`
+    : "";
+  openModal(`<h3>Bilan hebdo</h3>${body}${note}`);
+};
+</script>
+</body>
+</html>
