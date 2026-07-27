@@ -392,7 +392,7 @@ html.sans-mouvement *,html.sans-mouvement *::before{
 <section id="setup">
   <div class="kicker">Tableau FREELANCE — Pilotage</div>
   <h1>Urgence<br>× Impact</h1>
-  <p class="chapeau">Tes cartes Trello, posées sur une table de tri. Tu ranges, <em>l'outil écrit dans Trello</em>. Rien à recopier, rien à maintenir en double.</p>
+  <p class="chapeau">Vos cartes Trello, posées sur une table de tri. Vous rangez, <em>l'outil écrit dans Trello</em>. Rien à recopier, rien à maintenir en double.</p>
   <a class="btn btn-plein" id="connect" href="#">Se connecter avec Trello</a>
   <p id="setupmsg"></p>
 
@@ -403,13 +403,13 @@ html.sans-mouvement *,html.sans-mouvement *::before{
     <p>Trello n'accepte le retour automatique que si l'adresse de cette page est déclarée dans les réglages de la clé API. Sans attendre ce réglage, cette méthode marche toujours :</p>
     <ol>
       <li><a id="manuallink" href="#" target="_blank" rel="noopener">Ouvrir la page d'autorisation Trello</a>, cliquer sur « Allow ».</li>
-      <li>Trello affiche un long code. Copie-le et colle-le ici.</li>
+      <li>Trello affiche un long code. Copiez-le et collez-le ici.</li>
     </ol>
-    <p><input id="t" autocomplete="off" spellcheck="false" placeholder="Colle le code ici"></p>
+    <p><input id="t" autocomplete="off" spellcheck="false" placeholder="Collez le code ici"></p>
     <p><button class="btn-plein" id="manualgo">Valider</button></p>
   </details>
 
-  <p class="note">Le jeton reste dans ce navigateur : chaque nouvel ordinateur redemande cette connexion une fois. Le classement et l'historique, eux, vivent dans Trello et te suivent partout. Pour révoquer l'accès : paramètres Trello, section Applications autorisées.</p>
+  <p class="note">Le jeton reste dans ce navigateur : chaque nouvel ordinateur redemande cette connexion une fois. Le classement et l'historique, eux, vivent dans Trello et vous suivent partout. Pour révoquer l'accès : paramètres Trello, section Applications autorisées.</p>
 </section>
 
 <div id="app">
@@ -745,8 +745,8 @@ $("#search").oninput = render;
 $("#listfilter").onchange = render;
 $("#manualgo").onclick = async () => {
   const token = $("#t").value.trim();
-  if(!token){ $("#setupmsg").textContent = "Colle d'abord le code affiché par Trello."; return; }
-  await tryAuth(token, "Code refusé par Trello. Vérifie que tu l'as copié en entier.");
+  if(!token){ $("#setupmsg").textContent = "Collez d'abord le code affiché par Trello."; return; }
+  await tryAuth(token, "Code refusé par Trello. Vérifiez que vous l'avez copié en entier.");
 };
 
 async function tryAuth(token, echec){
@@ -778,7 +778,7 @@ async function tryAuth(token, echec){
     try{ auth = JSON.parse(saved); if(auth && auth.token){ start(); return; } }catch(e){}
   }
   if(document.referrer.includes("trello.com")){
-    $("#setupmsg").textContent = "Trello a validé l'autorisation, mais n'a pas renvoyé le code à cette page. Utilise la méthode ci-dessous, elle marche à tous les coups.";
+    $("#setupmsg").textContent = "Trello a validé l'autorisation, mais n'a pas renvoyé le code à cette page. Utilisez la méthode ci-dessous, elle fonctionne à tous les coups.";
     $("#fallback").open = true;
   }
 })();
@@ -1068,8 +1068,8 @@ function render(){
   const pn = $("#poolneuf");
   pn.hidden = neuves === 0;
   if(neuves) pn.textContent = neuves === 1
-    ? "1 carte est arrivée depuis ta dernière séance."
-    : `${neuves} cartes sont arrivées depuis ta dernière séance.`;
+    ? "1 carte est arrivée depuis votre dernière séance."
+    : `${neuves} cartes sont arrivées depuis votre dernière séance.`;
 
   // Boutons conscients de l'état : ne jamais proposer une action terminée.
   const bt = $("#btnTriage");
@@ -1170,7 +1170,7 @@ function rendreTriage(anime){
   const e = echeance(card);
   const question = st.etape === "urgent"
     ? "Est-ce que ça doit être fait bientôt ?"
-    : "Est-ce que ça pèse sur ton activité ?";
+    : "Est-ce que ça pèse sur votre activité ?";
   const progression = Math.round(st.index / st.file.length * 100);
 
   ouvrirScene("Tri éclair", `
@@ -1185,9 +1185,9 @@ function rendreTriage(anime){
       <button class="non" id="triNon">Non</button>
       <button class="oui" id="triOui">Oui</button>
     </div>
-    <p class="raccourci">Au clavier : <b>O</b> oui, <b>N</b> non, <b>Échap</b> pour arrêter. Ton avancée est enregistrée au fur et à mesure.</p>
+    <p class="raccourci">Au clavier : <b>O</b> oui, <b>N</b> non, <b>Échap</b> pour arrêter. Votre avancée est enregistrée au fur et à mesure.</p>
     ${miniMatrice(compteursActuels(), anime)}
-    <div class="captureLien"><button id="captureOuvre">Une tâche te revient en tête ? Note-la</button></div>
+    <div class="captureLien"><button id="captureOuvre">Une tâche vous revient en tête ? Notez-la</button></div>
     <div id="capture" hidden>
       <div class="lab">Nouvelle carte, déjà rangée</div>
       <input id="captureTexte" placeholder="Ce qu'il y a à faire" autocomplete="off">
@@ -1322,7 +1322,7 @@ function finTriage(){
   const q1 = st.places[1] || 0;
   const verdict = !total ? "Rien de classé cette fois."
     : q1 > SEUIL_Q1 ? `${q1} cartes en « faire maintenant ». Quand tout est urgent, plus rien ne l'est : ce quadrant mérite un second passage.`
-    : q1 === 0 ? "Aucune urgence sortie de ce tri. C'est une bonne nouvelle, profites-en pour attaquer le quadrant Planifier."
+    : q1 === 0 ? "Aucune urgence sortie de ce tri. C'est une bonne nouvelle, profitez-en pour attaquer le quadrant Planifier."
     : `${q1} vraie${q1>1?"s":""} urgence${q1>1?"s":""} sur ${total} cartes. C'est une proportion tenable.`;
 
   ouvrirScene("Séance terminée", `
@@ -1392,7 +1392,7 @@ $("#btnBilan").onclick = () => {
   if(!total){
     corps = `<div class="stat"><h3>Rien à compter</h3>
       <p class="sous">aucune carte sortie de la matrice ces 7 derniers jours</p>
-      <p class="verdict">Le bilan ne compte que ce que l'outil a vu passer. Il se remplira à mesure que tu termines ou archives des cartes.</p></div>`;
+      <p class="verdict">Le bilan ne compte que ce que l'outil a vu passer. Il se remplira à mesure que vous terminez ou archivez des cartes.</p></div>`;
   } else {
     const lignes = [1,2,3,4].map(q => {
       const n = counts[q] || 0;
@@ -1409,7 +1409,7 @@ $("#btnBilan").onclick = () => {
       1:"Semaine passée à éteindre des feux importants. Tenable ponctuellement, épuisant si ça dure.",
       2:"C'est la bonne semaine : l'important a avancé avant de devenir urgent.",
       3:"Beaucoup d'urgent à faible impact. Du mouvement, pas forcément de la valeur.",
-      4:"Tu as surtout terminé des choses ni urgentes ni importantes. La vraie question est ce qu'elles faisaient sur le tableau."
+      4:"Vous avez surtout terminé des choses ni urgentes ni importantes. La vraie question est ce qu'elles faisaient sur le tableau."
     };
     const autres = counts[0] || 0;
     const archivees = recent.filter(e => e.via === "archive").length;
