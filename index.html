@@ -357,9 +357,16 @@ a.fiche-scene:hover .lire{color:var(--encre)}
   header .titre{width:100%;margin-bottom:2px}
 }
 
+/* Deux façons de couper le mouvement : le réglage du système, et le bouton
+   de l'outil. Certaines personnes sont gênées par les animations sans avoir
+   configuré leur système, et d'autres veulent juste le calme. */
 @media (prefers-reduced-motion:reduce){
   *,*::before{transition:none!important;animation:none!important}
 }
+html.sans-mouvement *,html.sans-mouvement *::before{
+  transition:none!important;animation:none!important
+}
+#btnAnim[aria-pressed="true"]{background:var(--encre);color:var(--papier);border-color:var(--encre)}
 /* Entrée du tableau : les fiches se posent. Décoratif mais court, et
    entièrement neutralisé si le système demande moins de mouvement. */
 @media (prefers-reduced-motion:no-preference){
@@ -402,6 +409,7 @@ a.fiche-scene:hover .lire{color:var(--encre)}
     <button id="btnFocus">Je fais quoi ?</button>
     <button id="btnBilan">Bilan</button>
     <button id="btnUndo" disabled title="Annuler le dernier classement (Ctrl+Z)">Annuler</button>
+    <button id="btnAnim" aria-pressed="false" title="Couper les animations">Calme</button>
     <span class="spacer"></span>
     <span id="status"></span>
     <button id="reload" title="Recharger depuis Trello">↻</button>
@@ -500,6 +508,25 @@ let stateCardId = null;
 let undoPile = [];
 let premierRendu = true;
 let nouvellesIds = new Set();   // cartes arrivées depuis la dernière séance
+
+/* Mode calme : coupe tout mouvement, en plus du réglage système. Le choix
+   est gardé dans ce navigateur, il s'applique dès le chargement suivant. */
+const ANIM_KEY = "matrice-sans-mouvement";
+function mouvementCoupe(){
+  return document.documentElement.classList.contains("sans-mouvement")
+    || window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+function appliquerMouvement(coupe){
+  document.documentElement.classList.toggle("sans-mouvement", coupe);
+  const b = document.getElementById("btnAnim");
+  if(b){
+    b.setAttribute("aria-pressed", coupe ? "true" : "false");
+    b.textContent = coupe ? "Calme activé" : "Calme";
+    b.title = coupe ? "Réactiver les animations" : "Couper les animations";
+  }
+  localStorage.setItem(ANIM_KEY, coupe ? "1" : "0");
+}
+appliquerMouvement(localStorage.getItem(ANIM_KEY) === "1");
 
 // Confirmation brève : ce qui vient d'être fait, et de quoi le défaire.
 let toastTimer = null;
@@ -699,6 +726,7 @@ function clearError(){ const b = $("#errbar"); if(b) b.remove(); }
 
 $("#connect").href = authorizeUrl(true);
 $("#manuallink").href = authorizeUrl(false);
+$("#btnAnim").onclick = () => appliquerMouvement(!document.documentElement.classList.contains("sans-mouvement"));
 $("#logout").onclick = () => { localStorage.removeItem(LS); location.reload(); };
 $("#reload").onclick = () => load();
 $("#search").oninput = render;
@@ -969,9 +997,7 @@ document.addEventListener("click", e => { if(!e.target.closest(".menu,.ranger"))
 // la vraie valeur qui est atteinte.
 function compterJusqua(el, valeur){
   if(!el) return;
-  if(!valeur || window.matchMedia("(prefers-reduced-motion: reduce)").matches){
-    el.textContent = valeur || ""; return;
-  }
+  if(!valeur || mouvementCoupe()){ el.textContent = valeur || ""; return; }
   const duree = 520, debut = performance.now();
   const pas = t => {
     const p = Math.min(1, (t - debut)/duree);
@@ -1160,7 +1186,7 @@ async function repondre(oui){
   const card = cards.find(c => c.id === st.file[st.index]);
 
   const el = $("#ficheScene");
-  const bouge = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const bouge = !mouvementCoupe();
 
   // Le tampon s'imprime d'abord : la décision est visible sur la fiche avant
   // qu'elle quitte l'écran. C'est la confirmation, le vol n'est que le rangement.
