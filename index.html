@@ -998,14 +998,33 @@ async function trackHistory(){
 async function setQuad(card, newQuad, sansUndo){
   const before = card.quad;
   if(before === newQuad) return true;
+  const labelsAvant = [...(card.labels || [])];
   card.quad = newQuad;
   if(newQuad === 1) state.q1since[card.id] = nowISO(); else delete state.q1since[card.id];
   if(!sansUndo){ undoPile.push({id:card.id, before}); majUndo(); }
   render();
   setStatus("Enregistrement…"); clearError();
   try{
-    if(before) await api(`/cards/${card.id}/idLabels/${labelIds[before]}`, "DELETE");
-    if(newQuad) await api(`/cards/${card.id}/idLabels`, "POST", `value=${labelIds[newQuad]}`);
+    // On retire TOUTES les étiquettes de quadrant présentes, pas seulement
+    // celle que l'outil croit posée. Une carte peut en porter deux, par
+    // exemple si l'une a été mise à la main dans Trello : n'en retirer qu'une
+    // donnait une carte qui semblait partir puis revenait au rechargement.
+    const idsQuadrant = QUADS.map(d => labelIds[d.q]).filter(Boolean);
+    const aRetirer = idsQuadrant.filter(id => labelsAvant.includes(id));
+    if(!aRetirer.length && before) aRetirer.push(labelIds[before]);
+    for(const idLabel of aRetirer){
+      try{
+        await api(`/cards/${card.id}/idLabels/${idLabel}`, "DELETE");
+      }catch(e){
+        // Étiquette déjà absente : l'état voulu est atteint, ce n'est pas un échec.
+        if(!/ 40[04] /.test(e.message)) throw e;
+      }
+    }
+    card.labels = labelsAvant.filter(id => !idsQuadrant.includes(id));
+    if(newQuad){
+      await api(`/cards/${card.id}/idLabels`, "POST", `value=${labelIds[newQuad]}`);
+      card.labels.push(labelIds[newQuad]);
+    }
     writeState();
     setStatus(`${cards.length} cartes`);
     vibrer(8);
@@ -1023,6 +1042,7 @@ async function setQuad(card, newQuad, sansUndo){
     return true;
   }catch(err){
     card.quad = before;
+    card.labels = labelsAvant;
     if(before === 1) state.q1since[card.id] = state.q1since[card.id] || nowISO(); else delete state.q1since[card.id];
     if(!sansUndo){ undoPile.pop(); majUndo(); }
     render();
