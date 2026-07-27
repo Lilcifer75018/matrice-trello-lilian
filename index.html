@@ -195,7 +195,8 @@ main{display:grid;grid-template-columns:300px 1fr;overflow:hidden}
 .fiche:hover{border-color:var(--filet-fort);box-shadow:2px 2px 0 var(--papier2)}
 .fiche:active{cursor:grabbing}
 .fiche.prise{opacity:.35;transform:rotate(1.2deg)}
-.fiche .nom{font-size:13.5px;line-height:1.35;padding-right:26px}
+.fiche .nom{font-size:13.5px;line-height:1.35;padding-right:34px}
+.fiche:hover .nom{text-decoration:underline;text-underline-offset:2px;text-decoration-thickness:1px}
 .fiche .meta{
   margin-top:6px;font-family:var(--serif);font-size:.82rem;color:var(--encre2);
   display:flex;gap:9px;flex-wrap:wrap;align-items:center
@@ -1280,13 +1281,22 @@ function joursEnQ1(c){
   return Math.floor((Date.now() - new Date(state.q1since[c.id]).getTime())/86400000);
 }
 
+function ouvrirCarteTrello(c){
+  // En démonstration, les cartes n'existent pas dans Trello : ouvrir leur
+  // lien enverrait sur une page d'erreur.
+  if(demo){ toast("En démonstration, ces cartes n'existent pas dans Trello", 0); return; }
+  window.open(c.url, "_blank", "noopener");
+}
+
 function fiche(c, index){
   const el = document.createElement("div");
   el.className = "fiche" + (premierRendu ? " pose" : "");
   if(premierRendu) el.style.animationDelay = Math.min(index, 18) * 22 + "ms";
   el.draggable = true; el.dataset.id = c.id; el.tabIndex = 0;
   el.setAttribute("role","button");
-  el.setAttribute("aria-label", `${c.name}. ${QNOM[c.quad]}. Touches 1 à 4 pour classer.`);
+  el.title = "Cliquer pour ouvrir dans Trello, glisser pour classer";
+  el.setAttribute("aria-label",
+    `${c.name}. ${QNOM[c.quad]}. Entrée pour ouvrir dans Trello, touches 1 à 4 pour classer, Espace pour le menu.`);
 
   const e = echeance(c), dort = joursEnQ1(c);
   el.innerHTML = `
@@ -1299,13 +1309,25 @@ function fiche(c, index){
       ${nouvellesIds.has(c.id) ? `<span class="neuve">nouvelle</span>` : ""}
     </div>`;
 
-  el.addEventListener("dragstart", ev => { ev.dataTransfer.setData("text/plain", c.id); el.classList.add("prise"); });
-  el.addEventListener("dragend", () => el.classList.remove("prise"));
+  // Glisser sert à classer, cliquer sert à lire : deux gestes distincts sur
+  // le même objet. Le drapeau évite d'ouvrir Trello à la fin d'un glissement.
+  let glisse = false;
+  el.addEventListener("dragstart", ev => {
+    glisse = true; ev.dataTransfer.setData("text/plain", c.id); el.classList.add("prise");
+  });
+  el.addEventListener("dragend", () => { el.classList.remove("prise"); setTimeout(() => { glisse = false; }, 0); });
+  el.addEventListener("click", ev => {
+    if(glisse) return;
+    if(ev.target.closest(".ranger, .menu")) return;
+    if(window.getSelection && String(window.getSelection())) return;  // on lisait, on ne cliquait pas
+    ouvrirCarteTrello(c);
+  });
   el.querySelector(".ranger").onclick = ev => { ev.stopPropagation(); ouvrirMenu(el, c); };
   el.addEventListener("keydown", ev => {
     if(ev.key >= "1" && ev.key <= "4"){ ev.preventDefault(); setQuad(c, +ev.key); }
     else if(ev.key === "0"){ ev.preventDefault(); setQuad(c, 0); }
-    else if(ev.key === "Enter" || ev.key === " "){ ev.preventDefault(); ouvrirMenu(el, c); }
+    else if(ev.key === "Enter"){ ev.preventDefault(); ouvrirCarteTrello(c); }
+    else if(ev.key === " "){ ev.preventDefault(); ouvrirMenu(el, c); }
   });
   return el;
 }
