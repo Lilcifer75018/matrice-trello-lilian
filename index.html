@@ -240,6 +240,16 @@ main{display:grid;grid-template-columns:300px 1fr;overflow:hidden}
 }
 .fiche-scene .nom{font-size:clamp(1.25rem,3.4vw,1.7rem);font-weight:600;line-height:1.22;letter-spacing:-.01em}
 .fiche-scene .meta{margin-top:12px;font-family:var(--serif);font-style:italic;font-size:1rem;color:var(--encre2)}
+/* La fiche s'ouvre dans Trello : on ne décide pas sur un titre quand le
+   détail est à un clic. Nouvel onglet, pour ne pas perdre la séance en cours. */
+a.fiche-scene{display:block;text-decoration:none;color:inherit;cursor:pointer;transition:border-color var(--t),box-shadow var(--t)}
+a.fiche-scene:hover{border-color:var(--encre);box-shadow:5px 5px 0 var(--papier2)}
+.fiche-scene .lire{
+  margin-top:16px;padding-top:13px;border-top:1px solid var(--filet);
+  font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--encre2);
+  display:flex;align-items:center;gap:7px
+}
+a.fiche-scene:hover .lire{color:var(--encre)}
 .fiche-scene.envol{transition:transform 300ms cubic-bezier(.4,0,.7,.4),opacity 300ms ease}
 
 .question{
@@ -960,10 +970,12 @@ function rendreTriage(anime){
   const progression = Math.round(st.index / st.file.length * 100);
 
   ouvrirScene("Tri éclair", `
-    <div class="fiche-scene" id="ficheScene">
+    <a class="fiche-scene" id="ficheScene" href="${card.url}" target="_blank" rel="noopener"
+       title="Ouvrir cette carte dans Trello, dans un nouvel onglet">
       <div class="nom">${esc(card.name)}</div>
       <div class="meta">${esc(card.list)}${e ? " · échéance " + esc(e.txt) : " · sans échéance"}</div>
-    </div>
+      <div class="lire">Lire la carte dans Trello ↗</div>
+    </a>
     <p class="question">${question}</p>
     <div class="choix">
       <button class="non" id="triNon">Non</button>
