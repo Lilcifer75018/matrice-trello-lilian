@@ -6,238 +6,442 @@
 <title>Matrice Urgence × Impact — FREELANCE Pilotage</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,800&family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;1,6..72,300;1,6..72,400&display=swap" rel="stylesheet">
 <style>
+/* =========================================================================
+   Direction artistique : la table de tri.
+   Papier crème, encre, angles vifs, filets typographiques. Le décor n'a
+   AUCUNE couleur : les quatre couleurs de quadrant sont une information de
+   classement, jamais une décoration. Principe emprunté à 1X (l'interface
+   s'efface derrière le contenu) et à Sun Metalon (la palette raconte le
+   process : ici elle décroît avec l'exigence d'attention).
+   ========================================================================= */
 :root{
-  --bg:#f7f5f1; --ink:#14110f; --muted:#6b635c; --line:#ddd6cc; --card:#fffdfa;
-  --q1:#c8452f; --q2:#2f6b4f; --q3:#b4791f; --q4:#78706a;
-  --accent:#14110f;
+  --papier:#FAF8F5;
+  --papier2:#F2EDE8;
+  --encre:#141210;
+  --encre2:#5A4A3E;
+  --filet:#E2DAD0;
+  --filet-fort:#CFC4B6;
+
+  /* Couleur = classement. Q1 crie, Q4 s'efface. */
+  --q1:#CC1C00;          /* lisible en petit corps : 5.31:1 sur papier */
+  --q1-vif:#FE2400;      /* gros corps et filets seulement : 3.62:1 */
+  --q2:#4A1942;          /* 13.13:1 */
+  --q3:#6B4A2E;          /* 7.49:1 */
+  --q4:#8A7A6E;          /* marqueur only, texte en --encre2 */
+  --eteint:#786A5E;      /* état désactivé, lisible : 4.93:1 sur papier */
+
   --sans:"Bricolage Grotesque",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   --serif:"Newsreader",Georgia,serif;
-}
-@media (prefers-color-scheme:dark){
-  :root{--bg:#14110f;--ink:#f2ede6;--muted:#a09890;--line:#332e29;--card:#1d1916;
-        --q1:#e4705a;--q2:#5fa37e;--q3:#d6a248;--q4:#9a938c;--accent:#f2ede6;}
+
+  --t:170ms cubic-bezier(.2,.7,.3,1);
 }
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.45}
-button{font-family:inherit;font-size:14px;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:7px;padding:7px 13px}
-button:hover{border-color:var(--accent)}
-.primary{background:var(--accent);color:var(--bg);border:1px solid var(--accent);border-radius:7px;padding:9px 16px;font-weight:600;text-decoration:none;display:inline-block;cursor:pointer}
-input,select{font-family:inherit;font-size:14px;padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:var(--card);color:var(--ink);width:100%}
+html,body{height:100%}
+body{
+  margin:0;background:var(--papier);color:var(--encre);
+  font-family:var(--sans);font-size:15px;line-height:1.45;
+  -webkit-font-smoothing:antialiased;
+}
 a{color:inherit}
+:focus-visible{outline:2px solid var(--encre);outline-offset:2px}
 
-/* ---------- Écran de connexion ---------- */
-#setup{max-width:620px;margin:8vh auto;padding:0 24px}
-#setup h1{font-family:var(--serif);font-weight:500;font-size:32px;margin:0 0 6px}
-#setup p{color:var(--muted);font-size:14.5px}
-#setup ol{color:var(--muted);font-size:14.5px;padding-left:20px}
-#setup li{margin:7px 0}
-.field{margin:14px 0}
-.field label{display:block;font-size:13px;font-weight:600;margin-bottom:5px}
-.note{font-size:13px;color:var(--muted);border-left:2px solid var(--line);padding-left:12px;margin-top:22px}
+/* ---------- boutons : encre sur papier, aucun arrondi ---------- */
+button,.btn{
+  font-family:var(--sans);font-size:12px;font-weight:600;
+  letter-spacing:.07em;text-transform:uppercase;
+  cursor:pointer;border:1px solid var(--filet-fort);background:transparent;
+  color:var(--encre);border-radius:0;padding:9px 14px;min-height:44px;
+  transition:background var(--t),border-color var(--t),color var(--t);
+}
+button:hover:not(:disabled),.btn:hover{background:var(--papier2);border-color:var(--encre)}
+button:disabled{color:var(--eteint);border-color:var(--filet);cursor:default}
+.btn-plein{background:var(--encre);color:var(--papier);border-color:var(--encre);text-decoration:none;display:inline-block}
+.btn-plein:hover{background:#2C2622}
+.btn-compte{font-variant-numeric:tabular-nums;font-weight:800}
 
-/* ---------- Application ---------- */
+input{
+  font-family:var(--sans);font-size:14px;padding:11px 12px;
+  border:1px solid var(--filet-fort);border-radius:0;
+  background:#fff;color:var(--encre);width:100%;min-height:44px;
+}
+input::placeholder{color:var(--q4)}
+
+/* =================== écran de connexion =================== */
+#setup{max-width:600px;margin:0 auto;padding:12vh 26px 60px}
+#setup .kicker{
+  font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--encre2);margin-bottom:22px
+}
+#setup h1{
+  font-family:var(--sans);font-weight:800;font-size:clamp(2.4rem,7vw,3.6rem);
+  line-height:.94;letter-spacing:-.02em;margin:0 0 18px
+}
+#setup .chapeau{font-family:var(--serif);font-size:1.15rem;line-height:1.7;color:var(--encre2);margin:0 0 30px}
+#setup .chapeau em{font-style:italic;color:var(--encre)}
+.regle{height:1px;background:var(--filet);margin:30px 0}
+#setupmsg{font-size:13.5px;color:var(--encre2);margin-top:14px;font-family:var(--serif)}
+#fallback summary{cursor:pointer;font-size:12px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--encre2)}
+#fallback p,#fallback li{font-family:var(--serif);font-size:.98rem;line-height:1.65;color:var(--encre2)}
+.note{font-family:var(--serif);font-size:.95rem;line-height:1.65;color:var(--encre2);border-left:2px solid var(--filet-fort);padding-left:16px;margin-top:34px}
+
+/* =================== application =================== */
 #app{display:none;height:100vh;grid-template-rows:auto 1fr;overflow:hidden}
-header{display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid var(--line);flex-wrap:wrap}
-header h1{font-family:var(--serif);font-weight:500;font-size:19px;margin:0 8px 0 0;white-space:nowrap}
+header{
+  display:flex;align-items:center;gap:8px;padding:10px 16px;
+  border-bottom:1px solid var(--filet);flex-wrap:wrap;background:var(--papier)
+}
+header .titre{font-weight:800;font-size:14px;letter-spacing:-.01em;margin-right:6px;white-space:nowrap}
+header .titre span{font-family:var(--serif);font-style:italic;font-weight:300;letter-spacing:0}
 header .spacer{flex:1}
-header .actions{display:flex;gap:8px;flex-wrap:wrap}
-#status{font-size:13px;color:var(--muted)}
-main{display:grid;grid-template-columns:320px 1fr;overflow:hidden}
+#status{font-family:var(--serif);font-style:italic;font-size:13px;color:var(--encre2);white-space:nowrap}
+#search{width:150px;font-size:13px}
+select{
+  font-family:var(--sans);font-size:12px;font-weight:600;letter-spacing:.05em;
+  border:1px solid var(--filet-fort);background:transparent;color:var(--encre);
+  border-radius:0;padding:0 8px;min-height:44px
+}
+header button{padding:9px 12px}
 
-#pool{border-right:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden}
-#poolhead{padding:12px 14px 10px;border-bottom:1px solid var(--line);display:grid;gap:8px}
-#poolhead .row{display:flex;gap:8px;align-items:center}
-#poolcount{font-size:13px;color:var(--muted)}
-#poollist{overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:7px;flex:1}
+main{display:grid;grid-template-columns:300px 1fr;overflow:hidden}
 
-.grid{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:1px;background:var(--line);overflow:hidden}
-.quad{background:var(--bg);display:flex;flex-direction:column;overflow:hidden}
-.quad > h2{margin:0;padding:11px 14px 9px;font-size:14px;font-weight:700;display:flex;align-items:baseline;gap:8px;border-bottom:1px solid var(--line);flex-wrap:wrap}
-.quad > h2 .sub{font-family:var(--serif);font-style:italic;font-weight:400;font-size:13px;color:var(--muted)}
-.quad > h2 .n{margin-left:auto;font-size:12px;color:var(--muted);font-weight:400}
-.drop{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:7px}
-.drop.over{background:color-mix(in srgb,var(--accent) 7%,transparent);outline:2px dashed var(--accent);outline-offset:-6px}
-#q1 h2{color:var(--q1)} #q2 h2{color:var(--q2)} #q3 h2{color:var(--q3)} #q4 h2{color:var(--q4)}
+/* ---------- colonne "à placer" ---------- */
+#pool{border-right:1px solid var(--filet);display:flex;flex-direction:column;overflow:hidden;background:var(--papier)}
+#poolhead{padding:16px 16px 12px;border-bottom:1px solid var(--filet)}
+#poolhead .lab{font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--encre2)}
+#poolnb{font-family:var(--sans);font-weight:800;font-size:2.6rem;line-height:1;letter-spacing:-.03em;margin-top:4px;font-variant-numeric:tabular-nums}
+#poolnb.vide{color:var(--q4)}
+#poolsub{font-family:var(--serif);font-style:italic;font-size:.95rem;color:var(--encre2);margin-top:2px}
+#poollist{overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;flex:1}
 
-.warn{font-size:11px;font-weight:600;color:var(--q1);background:color-mix(in srgb, var(--q1) 14%, transparent);padding:2px 8px;border-radius:20px;white-space:nowrap}
+/* ---------- la matrice ---------- */
+.matrice{display:grid;grid-template-columns:26px 1fr;grid-template-rows:1fr 26px;overflow:hidden}
+.axe-y{
+  grid-column:1;grid-row:1;display:flex;align-items:center;justify-content:center;
+  border-right:1px solid var(--filet);position:relative
+}
+.axe-y span{
+  writing-mode:vertical-rl;transform:rotate(180deg);
+  font-size:10px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--encre2);
+  position:absolute
+}
+.axe-y .haut{top:14px} .axe-y .bas{bottom:14px}
+.axe-x{
+  grid-column:2;grid-row:2;display:flex;align-items:center;justify-content:space-between;
+  padding:0 16px;border-top:1px solid var(--filet)
+}
+.axe-x span{font-size:10px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--encre2)}
+.coin{grid-column:1;grid-row:2}
 
-.tile{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--line);border-radius:7px;padding:9px 11px;cursor:grab;font-size:13.5px}
-.tile:active{cursor:grabbing}
-.tile.dragging{opacity:.4}
-.tile .meta{margin-top:5px;font-size:11.5px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.tile .due{font-weight:600}
-.tile .due.late{color:var(--q1)}
-.tile .open{margin-left:auto;text-decoration:none;opacity:.55}
-.tile .open:hover{opacity:1}
-#q1 .drop .tile{border-left-color:var(--q1)} #q2 .drop .tile{border-left-color:var(--q2)}
-#q3 .drop .tile{border-left-color:var(--q3)} #q4 .drop .tile{border-left-color:var(--q4)}
+.grille{
+  grid-column:2;grid-row:1;
+  display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;overflow:hidden
+}
+.quad{position:relative;display:flex;flex-direction:column;overflow:hidden;background:var(--papier)}
+#q2,#q4{border-left:1px solid var(--filet)}
+#q3,#q4{border-top:1px solid var(--filet)}
 
-.empty{color:var(--muted);font-size:13px;font-family:var(--serif);font-style:italic;padding:14px 4px}
-.err{background:var(--q1);color:#fff;padding:9px 16px;font-size:13.5px}
-@media (max-width:900px){
-  main{grid-template-columns:1fr;grid-template-rows:auto 1fr;overflow-y:auto}
-  #pool{border-right:none;border-bottom:1px solid var(--line);max-height:38vh}
-  .grid{grid-template-columns:1fr;grid-template-rows:none}
-  .quad{min-height:230px}
+/* Le chiffre romain fantôme : signature reprise de la charte du site
+   (grands chiffres décoratifs à très faible opacité en fond de section). */
+.quad::before{
+  content:attr(data-num);position:absolute;right:10px;bottom:-14px;
+  font-family:var(--sans);font-weight:800;font-size:clamp(5rem,11vw,9rem);line-height:1;
+  color:var(--q2);opacity:.055;pointer-events:none;user-select:none;letter-spacing:-.04em
+}
+.quad > h2{
+  margin:0;padding:14px 16px 10px;display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;
+  position:relative;z-index:1
+}
+.quad h2 .nom{font-size:14px;font-weight:800;letter-spacing:-.01em}
+.quad h2 .def{font-family:var(--serif);font-style:italic;font-weight:300;font-size:.92rem;color:var(--encre2)}
+.quad h2 .nb{margin-left:auto;font-size:13px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--encre2)}
+#q1 h2 .nom{color:var(--q1)} #q2 h2 .nom{color:var(--q2)}
+#q3 h2 .nom{color:var(--q3)} #q4 h2 .nom{color:var(--encre2)}
+
+.alerte{
+  font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--q1);border:1px solid var(--q1-vif);padding:3px 8px;white-space:nowrap
 }
 
-/* ---------- Fenêtres (tri éclair, focus, bilan) ---------- */
-.overlay{position:fixed;inset:0;background:rgba(20,17,15,.5);z-index:50;padding:20px}
-.overlay:not([hidden]){display:flex;align-items:center;justify-content:center}
-.modal{background:var(--card);border:1px solid var(--line);border-radius:12px;max-width:480px;width:100%;max-height:85vh;overflow-y:auto;padding:24px 26px;position:relative}
-.modal h3{font-family:var(--serif);font-weight:500;font-size:22px;margin:0 0 4px}
-.modal .close{position:absolute;top:12px;right:12px;border:none;background:none;font-size:17px;color:var(--muted);padding:6px 9px;line-height:1}
-.modal .close:hover{color:var(--ink)}
-.modal .step{color:var(--muted);font-size:13px;margin-bottom:12px}
-.bigchoice{display:flex;gap:10px;margin-top:16px}
-.bigchoice button{flex:1;padding:15px;font-size:15px;font-weight:600}
-.bigchoice button.yes{border-color:var(--q2);color:var(--q2)}
-.bigchoice button.no{border-color:var(--muted);color:var(--muted)}
-.triagecard{border:1px solid var(--line);border-radius:9px;padding:14px 16px;margin:14px 0;background:var(--bg)}
-.triagecard .name{font-size:15px;margin-bottom:5px}
-.triagecard .meta{font-size:12.5px;color:var(--muted)}
-.qprompt{font-weight:600;margin:0}
-.skiprow{margin-top:12px;text-align:center}
-.skiprow button{border:none;background:none;color:var(--muted);font-size:12.5px;text-decoration:underline;padding:4px}
-.kbdhint{font-size:11.5px;color:var(--muted);text-align:center;margin-top:10px}
-.focusitem{border-left:3px solid var(--line);padding:9px 12px;margin:10px 0;border-radius:6px;background:var(--bg)}
-.focusitem .qtag{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:2px}
-.focusitem .meta{font-size:12px;color:var(--muted);margin-top:4px;display:flex;gap:6px;align-items:center}
-.bilanrow{display:flex;align-items:center;gap:10px;margin:10px 0;font-size:13.5px}
-.bilanrow .dot{width:10px;height:10px;border-radius:50%;flex:none}
-.bilanrow .label{width:118px;flex:none}
-.bilanrow .bar{flex:1;height:8px;border-radius:4px;background:var(--line);overflow:hidden}
-.bilanrow .bar > i{display:block;height:100%;border-radius:4px}
-.bilanrow .num{width:24px;text-align:right;font-variant-numeric:tabular-nums;color:var(--muted);flex:none}
-.bilancomment{font-family:var(--serif);font-style:italic;color:var(--muted);margin-top:16px;font-size:14.5px;line-height:1.5}
+.zone{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;position:relative;z-index:1}
+.zone.survol{background:var(--papier2);box-shadow:inset 0 0 0 2px var(--encre)}
+
+/* ---------- la fiche ---------- */
+.fiche{
+  background:#fff;border:1px solid var(--filet);border-left:3px solid var(--filet-fort);
+  border-radius:0;padding:10px 12px;cursor:grab;position:relative;
+  transition:border-color var(--t),transform var(--t),box-shadow var(--t)
+}
+.fiche:hover{border-color:var(--filet-fort);box-shadow:2px 2px 0 var(--papier2)}
+.fiche:active{cursor:grabbing}
+.fiche.prise{opacity:.35;transform:rotate(1.2deg)}
+.fiche .nom{font-size:13.5px;line-height:1.35;padding-right:26px}
+.fiche .meta{
+  margin-top:6px;font-family:var(--serif);font-size:.82rem;color:var(--encre2);
+  display:flex;gap:9px;flex-wrap:wrap;align-items:center
+}
+.fiche .liste{font-style:italic}
+.fiche .ech{font-weight:400;font-family:var(--sans);font-size:11px;letter-spacing:.04em}
+.fiche .ech.retard{color:var(--q1);font-weight:600}
+.fiche .dort{color:var(--q1);font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:.04em}
+#q1 .fiche{border-left-color:var(--q1-vif)}
+#q2 .fiche{border-left-color:var(--q2)}
+#q3 .fiche{border-left-color:var(--q3)}
+#q4 .fiche{border-left-color:var(--q4)}
+
+/* Alternative obligatoire au glisser-déposer (WCAG 2.2, 2.5.7) :
+   un menu au clic, et les touches 1 à 4 quand la fiche a le focus. */
+/* Cible tactile pleine hauteur : le point de saisie est petit à l'oeil,
+   la zone cliquable fait 44px, mesurée. */
+.fiche .ranger{
+  position:absolute;top:2px;right:2px;width:44px;min-height:44px;padding:0;
+  font-size:15px;border-color:transparent;letter-spacing:0;line-height:1;
+  display:flex;align-items:center;justify-content:center;color:var(--eteint)
+}
+.fiche:hover .ranger,.fiche:focus-within .ranger{border-color:var(--filet-fort);color:var(--encre)}
+.menu{
+  position:absolute;top:30px;right:6px;z-index:20;background:#fff;
+  border:1px solid var(--encre);padding:4px;display:flex;flex-direction:column;min-width:190px
+}
+.menu button,.menu a{
+  border:none;text-align:left;text-transform:none;letter-spacing:0;font-size:13px;
+  font-weight:400;padding:9px 10px;min-height:44px;display:flex;gap:9px;align-items:center;
+  text-decoration:none;color:var(--encre);font-family:var(--sans);background:transparent;cursor:pointer
+}
+.menu a:hover{background:var(--papier2)}
+.menu .sep{height:1px;background:var(--filet);margin:4px 0}
+.menu button:hover{background:var(--papier2)}
+.menu .puce{width:9px;height:9px;flex:none}
+.menu .touche{margin-left:auto;font-size:11px;color:var(--q4);font-variant-numeric:tabular-nums}
+
+.vide{
+  font-family:var(--serif);font-style:italic;font-size:.95rem;color:var(--q4);
+  padding:10px 2px;line-height:1.5
+}
+.erreur{background:var(--q1);color:#fff;padding:10px 16px;font-size:13.5px;font-family:var(--serif)}
+
+/* =================== plein écran (tri, focus, bilan) =================== */
+.scene{position:fixed;inset:0;z-index:60;background:var(--papier);display:flex;flex-direction:column}
+.scene[hidden]{display:none}
+.scene-tete{
+  display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--filet)
+}
+.scene-tete .lab{font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--encre2)}
+.scene-tete .spacer{flex:1}
+.jauge{height:2px;background:var(--filet);position:relative}
+.jauge > i{display:block;height:100%;background:var(--encre);transition:width 260ms ease}
+.scene-corps{flex:1;overflow-y:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 20px;gap:6px}
+
+/* la fiche mise en scène */
+.fiche-scene{
+  background:#fff;border:1px solid var(--filet-fort);padding:26px 28px;max-width:620px;width:100%;
+  box-shadow:3px 3px 0 var(--papier2)
+}
+.fiche-scene .nom{font-size:clamp(1.25rem,3.4vw,1.7rem);font-weight:600;line-height:1.22;letter-spacing:-.01em}
+.fiche-scene .meta{margin-top:12px;font-family:var(--serif);font-style:italic;font-size:1rem;color:var(--encre2)}
+.fiche-scene.envol{transition:transform 300ms cubic-bezier(.4,0,.7,.4),opacity 300ms ease}
+
+.question{
+  font-family:var(--serif);font-style:italic;font-size:clamp(1.4rem,4vw,2rem);
+  font-weight:300;text-align:center;margin:30px 0 20px
+}
+.choix{display:flex;gap:14px;max-width:620px;width:100%}
+.choix button{flex:1;padding:20px;font-size:14px;letter-spacing:.1em;min-height:64px}
+.choix .oui{border-color:var(--encre);border-width:2px}
+.choix .oui:hover{background:var(--encre);color:var(--papier)}
+.raccourci{font-family:var(--serif);font-style:italic;font-size:.9rem;color:var(--q4);margin-top:16px;text-align:center}
+.raccourci b{font-family:var(--sans);font-style:normal;font-weight:600;font-size:.78rem;letter-spacing:.06em;border:1px solid var(--filet-fort);padding:2px 6px;margin:0 2px}
+
+/* mini matrice qui se remplit pendant le tri */
+.mini{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--filet);max-width:620px;width:100%;margin-top:34px;border:1px solid var(--filet)}
+.mini > div{background:var(--papier);padding:9px 11px;display:flex;align-items:baseline;gap:8px;transition:background var(--t)}
+.mini > div.pulse{background:var(--papier2)}
+.mini .n{font-size:10px;font-weight:800;letter-spacing:.1em}
+.mini .c{margin-left:auto;font-weight:800;font-variant-numeric:tabular-nums;font-size:15px;transition:transform var(--t)}
+.mini .c.saute{transform:scale(1.45)}
+.mini .t{font-family:var(--serif);font-style:italic;font-size:.86rem;color:var(--encre2)}
+
+/* bilan et fin de séance */
+.stat{max-width:620px;width:100%}
+.stat h3{font-size:clamp(1.8rem,5vw,2.6rem);font-weight:800;letter-spacing:-.02em;line-height:1;margin:0 0 6px}
+.stat .sous{font-family:var(--serif);font-style:italic;font-size:1.05rem;color:var(--encre2);margin-bottom:28px}
+.ligne{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--filet)}
+.ligne .puce{width:10px;height:10px;flex:none}
+.ligne .lab{width:132px;flex:none;font-size:12.5px;font-weight:600}
+.ligne .barre{flex:1;height:6px;background:var(--papier2)}
+.ligne .barre > i{display:block;height:100%}
+.ligne .n{width:30px;text-align:right;font-weight:800;font-variant-numeric:tabular-nums}
+.verdict{font-family:var(--serif);font-style:italic;font-size:1.08rem;line-height:1.65;color:var(--encre2);margin-top:26px;border-left:2px solid var(--filet-fort);padding-left:16px}
+.appoint{font-family:var(--serif);font-size:.92rem;color:var(--q4);margin-top:18px;line-height:1.6}
+
+.focus-item{border-left:3px solid var(--filet);padding:14px 18px;margin:12px 0;background:#fff;border-top:1px solid var(--filet);border-right:1px solid var(--filet);border-bottom:1px solid var(--filet)}
+.focus-item .rang{font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;margin-bottom:5px}
+.focus-item .nom{font-size:1.05rem;line-height:1.3}
+.focus-item .meta{font-family:var(--serif);font-style:italic;font-size:.9rem;color:var(--encre2);margin-top:6px}
+
+/* =================== responsive =================== */
+@media (max-width:900px){
+  main{grid-template-columns:1fr;grid-template-rows:auto 1fr;overflow-y:auto}
+  #pool{border-right:none;border-bottom:1px solid var(--filet);max-height:40vh}
+  .matrice{grid-template-columns:1fr;grid-template-rows:auto auto}
+  .axe-y{display:none} .coin{display:none}
+  .axe-x{grid-column:1;grid-row:2}
+  .grille{grid-column:1;grid-row:1;grid-template-columns:1fr;grid-template-rows:none}
+  #q2,#q4{border-left:none} #q2,#q3,#q4{border-top:1px solid var(--filet)}
+  .quad{min-height:210px}
+  header .titre{width:100%;margin-bottom:2px}
+}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before{transition:none!important;animation:none!important}
+}
+/* Entrée du tableau : les fiches se posent. Décoratif mais court, et
+   entièrement neutralisé si le système demande moins de mouvement. */
+@media (prefers-reduced-motion:no-preference){
+  .fiche.pose{animation:pose 320ms cubic-bezier(.2,.7,.3,1) backwards}
+  @keyframes pose{from{opacity:0;transform:translateY(-7px)}to{opacity:1;transform:none}}
+}
 </style>
 </head>
 <body>
 
 <section id="setup">
-  <h1>Matrice Urgence × Impact</h1>
-  <p>Tableau <strong>FREELANCE — Pilotage</strong>. Cette page lit tes cartes Trello en direct et écrit le quadrant que tu choisis.</p>
-  <div class="field"><a class="primary" id="connect" href="#">Se connecter avec Trello</a></div>
-  <p id="setupmsg" style="font-size:13.5px;color:var(--muted)"></p>
+  <div class="kicker">Tableau FREELANCE — Pilotage</div>
+  <h1>Urgence<br>× Impact</h1>
+  <p class="chapeau">Tes cartes Trello, posées sur une table de tri. Tu ranges, <em>l'outil écrit dans Trello</em>. Rien à recopier, rien à maintenir en double.</p>
+  <a class="btn btn-plein" id="connect" href="#">Se connecter avec Trello</a>
+  <p id="setupmsg"></p>
 
-  <details id="fallback" style="margin-top:20px">
-    <summary style="cursor:pointer;font-size:13.5px;color:var(--muted)">Le bouton ne fonctionne pas ?</summary>
-    <p style="font-size:13.5px;color:var(--muted);margin-top:12px">
-      Trello n'accepte le retour automatique que si l'adresse de cette page est déclarée
-      dans les réglages de la clé API. Sans attendre ce réglage, cette méthode marche
-      toujours :
-    </p>
-    <ol style="font-size:13.5px;color:var(--muted);padding-left:20px">
+  <div class="regle"></div>
+
+  <details id="fallback">
+    <summary>Le bouton ne fonctionne pas ?</summary>
+    <p>Trello n'accepte le retour automatique que si l'adresse de cette page est déclarée dans les réglages de la clé API. Sans attendre ce réglage, cette méthode marche toujours :</p>
+    <ol>
       <li><a id="manuallink" href="#" target="_blank" rel="noopener">Ouvrir la page d'autorisation Trello</a>, cliquer sur « Allow ».</li>
-      <li>Trello affiche alors un long code. Copie-le et colle-le ici.</li>
+      <li>Trello affiche un long code. Copie-le et colle-le ici.</li>
     </ol>
-    <div class="field"><input id="t" autocomplete="off" spellcheck="false" placeholder="Colle le code ici"></div>
-    <div class="field"><button class="primary" id="manualgo">Valider</button></div>
+    <p><input id="t" autocomplete="off" spellcheck="false" placeholder="Colle le code ici"></p>
+    <p><button class="btn-plein" id="manualgo">Valider</button></p>
   </details>
 
-  <p class="note">Le jeton reste dans ce navigateur : chaque nouvel ordinateur ou navigateur redemande cette connexion une fois, puis reste connecté. Le classement des cartes et l'historique, eux, vivent dans Trello et te suivent partout. Pour révoquer l'accès, va dans les paramètres Trello, section Applications autorisées.</p>
+  <p class="note">Le jeton reste dans ce navigateur : chaque nouvel ordinateur redemande cette connexion une fois. Le classement et l'historique, eux, vivent dans Trello et te suivent partout. Pour révoquer l'accès : paramètres Trello, section Applications autorisées.</p>
 </section>
 
 <div id="app">
   <header>
-    <h1>Urgence × Impact business</h1>
-    <select id="listfilter" style="width:auto;min-width:170px"></select>
-    <input id="search" placeholder="Filtrer par mot" style="width:180px">
-    <div class="actions">
-      <button id="btnTriage">Tri éclair</button>
-      <button id="btnFocus">Je fais quoi ?</button>
-      <button id="btnBilan">Bilan</button>
-    </div>
+    <div class="titre">Urgence <span>×</span> Impact</div>
+    <select id="listfilter" aria-label="Filtrer par liste"></select>
+    <input id="search" placeholder="Filtrer" aria-label="Filtrer par mot">
+    <button id="btnTriage">Tri éclair</button>
+    <button id="btnFocus">Je fais quoi ?</button>
+    <button id="btnBilan">Bilan</button>
+    <button id="btnUndo" disabled title="Annuler le dernier classement (Ctrl+Z)">Annuler</button>
     <span class="spacer"></span>
     <span id="status"></span>
-    <button id="reload">Recharger</button>
-    <button id="logout">Déconnecter</button>
+    <button id="reload" title="Recharger depuis Trello">↻</button>
+    <button id="logout">Sortir</button>
   </header>
   <main>
     <aside id="pool">
       <div id="poolhead">
-        <strong style="font-size:14px">À placer</strong>
-        <span id="poolcount"></span>
+        <div class="lab">À placer</div>
+        <div id="poolnb">0</div>
+        <div id="poolsub"></div>
       </div>
-      <div id="poollist" class="drop" data-q="0"></div>
+      <div id="poollist" class="zone" data-q="0"></div>
     </aside>
-    <div class="grid">
-      <section class="quad" id="q1"><h2>Faire maintenant <span class="sub">urgent, fort impact</span><span class="warn" id="q1warn" hidden></span><span class="n"></span></h2><div class="drop" data-q="1"></div></section>
-      <section class="quad" id="q2"><h2>Planifier <span class="sub">fort impact, pas urgent</span><span class="n"></span></h2><div class="drop" data-q="2"></div></section>
-      <section class="quad" id="q3"><h2>Expédier <span class="sub">urgent, faible impact</span><span class="n"></span></h2><div class="drop" data-q="3"></div></section>
-      <section class="quad" id="q4"><h2>Laisser tomber <span class="sub">ni urgent, ni fort impact</span><span class="n"></span></h2><div class="drop" data-q="4"></div></section>
+
+    <div class="matrice">
+      <div class="axe-y"><span class="haut">Fort impact</span><span class="bas">Faible impact</span></div>
+      <div class="grille">
+        <section class="quad" id="q1" data-num="I">
+          <h2><span class="nom">Faire maintenant</span><span class="def">urgent, fort impact</span><span class="alerte" id="q1alerte" hidden></span><span class="nb"></span></h2>
+          <div class="zone" data-q="1"></div>
+        </section>
+        <section class="quad" id="q2" data-num="II">
+          <h2><span class="nom">Planifier</span><span class="def">fort impact, pas urgent</span><span class="nb"></span></h2>
+          <div class="zone" data-q="2"></div>
+        </section>
+        <section class="quad" id="q3" data-num="III">
+          <h2><span class="nom">Expédier</span><span class="def">urgent, faible impact</span><span class="nb"></span></h2>
+          <div class="zone" data-q="3"></div>
+        </section>
+        <section class="quad" id="q4" data-num="IV">
+          <h2><span class="nom">Laisser tomber</span><span class="def">ni urgent, ni fort impact</span><span class="nb"></span></h2>
+          <div class="zone" data-q="4"></div>
+        </section>
+      </div>
+      <div class="coin"></div>
+      <div class="axe-x"><span>Urgent</span><span>Pas urgent</span></div>
     </div>
   </main>
 </div>
 
-<div id="overlay" class="overlay" hidden>
-  <div class="modal" id="modalBody" role="dialog" aria-modal="true"></div>
-</div>
+<section class="scene" id="scene" hidden>
+  <div class="scene-tete">
+    <span class="lab" id="sceneLab"></span>
+    <span class="spacer"></span>
+    <span class="lab" id="sceneCompte"></span>
+    <button id="sceneClose" title="Fermer (Échap)">Fermer</button>
+  </div>
+  <div class="jauge"><i id="sceneJauge" style="width:0"></i></div>
+  <div class="scene-corps" id="sceneCorps"></div>
+</section>
 
 <script>
 const BOARD = "6a65ea9554b832c94cc759a9";
 // Clé API Trello : identifiant public de l'application, pas un secret (Trello
-// la traite comme un client_id OAuth). Le vrai secret, c'est le jeton obtenu
-// via /1/authorize ci-dessous, qui n'est jamais tapé ni stocké ailleurs que
-// dans le navigateur de la personne qui clique "Se connecter".
+// la traite comme un client_id OAuth). Le vrai secret est le jeton obtenu via
+// /1/authorize, qui ne quitte jamais le navigateur.
 const TRELLO_KEY = "5b24411eb28ffe4530bbd50d7753a8e7";
+
 // Couleurs choisies pour ne PAS entrer en collision avec les étiquettes
 // thématiques du tableau (Acquisition rouge, Business jaune, Juliette verte,
-// Contenu orange, Système violet). Sur le devant d'une carte, le quadrant doit
-// se lire d'un coup d'oeil sans se confondre avec le thème.
+// Contenu orange, Système violet).
 const QUADS = [
   {q:1, name:"Q1 Faire maintenant", color:"pink"},
   {q:2, name:"Q2 Planifier",        color:"sky"},
   {q:3, name:"Q3 Expédier",         color:"lime"},
   {q:4, name:"Q4 Laisser tomber",   color:"black"}
 ];
+const QNOM = {0:"Non classée", 1:"Faire maintenant", 2:"Planifier", 3:"Expédier", 4:"Laisser tomber"};
+const QNUM = {1:"I", 2:"II", 3:"III", 4:"IV"};
+
 const LS = "matrice-trello-auth";
 
-/* La mémoire de l'outil (date d'entrée en Q1, journal des cartes terminées)
+/* La mémoire de l'outil (date d'entrée en Q1, journal des cartes sorties)
    n'existe pas nativement dans Trello. La reconstituer en interrogeant
    l'historique de chaque carte coûterait un appel réseau par carte.
-
-   Elle est donc écrite au fil de l'eau dans la description d'UNE carte
-   dédiée, archivée pour ne jamais encombrer le tableau. Lecture : un appel.
-   Écriture : un appel, et seulement quand quelque chose a changé. La mémoire
-   suit donc le compte Trello, pas le navigateur, et fonctionne depuis
-   n'importe quel poste.
-
-   Le stockage local ne sert plus que de copie de secours, si Trello refuse
-   momentanément l'écriture. */
+   Elle est donc écrite dans la description d'UNE carte dédiée et archivée :
+   un appel en lecture, un en écriture, quel que soit le nombre de cartes.
+   La mémoire suit le compte Trello, pas le navigateur. */
 const STATE_CARD_NAME = "Matrice Urgence x Impact — mémoire de l'outil (ne pas supprimer)";
 const STATE_ID_KEY = "matrice-state-card-id";
 const STATE_CACHE_KEY = "matrice-state-cache";
 const MARK_START = "<!--MATRICE_DATA";
 const MARK_END = "MATRICE_DATA-->";
 
-const SEUIL_Q1 = 7;      // au-delà, on prévient que Q1 déborde
-const SEUIL_STALE = 14;  // jours en Q1 avant d'attirer l'attention
-const RETENTION_J = 60;  // on ne garde pas le journal indéfiniment
+const SEUIL_Q1 = 7;
+const SEUIL_STALE = 14;
+const RETENTION_J = 60;
 
 let auth = null, cards = [], labelIds = {}, lists = [], triageState = null;
-// état partagé, tel que stocké dans Trello
-let state = {q1since:{}, log:[], snapshot:{}};
+let state = {q1since:{}, log:[], snapshot:{}, noms:{}, quads:{}};
 let stateCardId = null;
+let undoPile = [];
+let premierRendu = true;
 
 /* ---------- accès Trello ---------- */
 function authorizeUrl(withReturn){
-  // Flux "implicit token" de Trello : Trello gère le login sur son propre
-  // domaine et renvoie ici avec #token=... dans l'URL. Ce fragment (après le
-  // #) n'est jamais envoyé à un serveur, ni celui de Trello ni un hébergeur
-  // intermédiaire : il reste côté navigateur, lu uniquement par ce script.
-  //
-  // Sans return_url, Trello affiche le jeton à l'écran au lieu de renvoyer
-  // ici : c'est la porte de secours, elle ne dépend d'aucun réglage d'origine
-  // autorisée côté Trello.
+  // Flux "implicit token" : le jeton revient dans le fragment d'URL, qui
+  // n'est envoyé à aucun serveur. Sans return_url, Trello affiche le jeton
+  // à l'écran : c'est la porte de secours, indépendante du réglage
+  // d'origine autorisée.
   const params = new URLSearchParams({
-    expiration: "never",
-    scope: "read,write",
-    response_type: "token",
-    name: "Matrice Urgence x Impact",
-    key: TRELLO_KEY
+    expiration:"never", scope:"read,write", response_type:"token",
+    name:"Matrice Urgence x Impact", key:TRELLO_KEY
   });
   if(withReturn) params.set("return_url", location.origin + location.pathname);
   return `https://trello.com/1/authorize?${params.toString()}`;
@@ -252,30 +456,38 @@ async function api(path, method="GET", params=""){
   return txt ? JSON.parse(txt) : null;
 }
 
-/* ---------- petit stockage local (copie de secours seulement) ---------- */
+/* ---------- stockage local (copie de secours seulement) ---------- */
 function nowISO(){ return new Date().toISOString(); }
 function loadJSON(key, fallback){ try{ const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }catch(e){ return fallback; } }
 function saveJSON(key, obj){ localStorage.setItem(key, JSON.stringify(obj)); }
 
-/* ---------- mémoire partagée, stockée dans une carte Trello archivée ---------- */
-function emptyState(){ return {q1since:{}, log:[], snapshot:{}}; }
+/* ---------- mémoire partagée dans une carte Trello archivée ---------- */
+function emptyState(){ return {q1since:{}, log:[], snapshot:{}, noms:{}, quads:{}}; }
 
 function encodeState(st){
-  // La description reste lisible par un humain qui ouvrirait la carte par
-  // curiosité : une explication en clair, puis les données dans un commentaire
-  // HTML que Trello n'affiche pas en mode rendu.
+  // Trace lisible par un humain qui ouvrirait la carte : les cartes sorties
+  // de la matrice disparaissent de l'écran, pas de l'histoire.
+  const recentes = [...(st.log || [])]
+    .sort((a,b) => (a.doneAt < b.doneAt ? 1 : -1))
+    .slice(0, 40)
+    .map(e => {
+      const d = new Date(e.doneAt).toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit",year:"numeric"});
+      return `- ${d} — ${e.via === "archive" ? "archivée" : "terminée"} — ${QNOM[e.quad] || "non classée"} — ${e.name}`;
+    });
   return [
     "Cette carte est la mémoire de la Matrice Urgence x Impact.",
     "",
-    "Elle retient depuis quand chaque carte est en Q1, et quelles cartes ont été",
-    "terminées, informations que Trello ne conserve pas de façon exploitable.",
-    "Elle est archivée volontairement : elle n'a pas à apparaître sur le tableau.",
+    "Elle retient depuis quand chaque carte est en Q1, et ce que sont devenues les",
+    "cartes sorties du tableau, informations que Trello ne conserve pas de façon",
+    "exploitable. Elle est archivée volontairement.",
     "",
     "Ne pas supprimer, ne pas modifier à la main. L'outil la réécrit tout seul.",
     "",
-    MARK_START,
-    JSON.stringify(st),
-    MARK_END
+    "## Dernières cartes sorties de la matrice",
+    "",
+    recentes.length ? recentes.join("\n") : "(rien pour l'instant)",
+    "",
+    MARK_START, JSON.stringify(st), MARK_END
   ].join("\n");
 }
 function decodeState(desc){
@@ -283,94 +495,75 @@ function decodeState(desc){
   const i = desc.indexOf(MARK_START), j = desc.indexOf(MARK_END);
   if(i === -1 || j === -1 || j < i) return emptyState();
   try{
-    const parsed = JSON.parse(desc.slice(i + MARK_START.length, j).trim());
-    return {
-      q1since: parsed.q1since || {},
-      log: Array.isArray(parsed.log) ? parsed.log : [],
-      snapshot: parsed.snapshot || {}
-    };
+    const p = JSON.parse(desc.slice(i + MARK_START.length, j).trim());
+    return {q1since:p.q1since||{}, log:Array.isArray(p.log)?p.log:[], snapshot:p.snapshot||{}, noms:p.noms||{}, quads:p.quads||{}};
   }catch(e){ return emptyState(); }
 }
-
-// Retrouve la carte mémoire, ou la crée. L'identifiant est mis en cache
-// localement pour éviter la recherche à chaque chargement, mais un poste qui
-// ne l'a pas la retrouve tout seul par son nom : rien n'est perdu.
 async function findOrCreateStateCard(){
   const cached = localStorage.getItem(STATE_ID_KEY);
   if(cached){
     try{
       const c = await api(`/cards/${cached}`, "GET", "fields=id,name,desc");
       if(c && c.id) return c;
-    }catch(e){ /* carte supprimée ou identifiant périmé : on rebascule sur la recherche */ }
+    }catch(e){ /* identifiant périmé : on retombe sur la recherche par nom */ }
   }
-  // La carte étant archivée, elle n'apparaît pas dans les cartes ouvertes.
   const closed = await api(`/boards/${BOARD}/cards/closed`, "GET", "fields=id,name,desc");
   const hit = (closed || []).find(c => c.name === STATE_CARD_NAME);
   if(hit){ localStorage.setItem(STATE_ID_KEY, hit.id); return hit; }
-
   setStatus("Création de la carte mémoire…");
-  const listId = (lists[0] || {}).id;
   const made = await api(`/cards`, "POST",
-    `idList=${listId}&name=${encodeURIComponent(STATE_CARD_NAME)}&desc=${encodeURIComponent(encodeState(emptyState()))}`);
-  await api(`/cards/${made.id}`, "PUT", "closed=true"); // archivée aussitôt
+    `idList=${(lists[0]||{}).id}&name=${encodeURIComponent(STATE_CARD_NAME)}&desc=${encodeURIComponent(encodeState(emptyState()))}`);
+  await api(`/cards/${made.id}`, "PUT", "closed=true");
   localStorage.setItem(STATE_ID_KEY, made.id);
   return made;
 }
-
 async function readState(){
   try{
     const card = await findOrCreateStateCard();
     stateCardId = card.id;
     const st = decodeState(card.desc);
-    saveJSON(STATE_CACHE_KEY, st);   // copie de secours
+    saveJSON(STATE_CACHE_KEY, st);
     return st;
   }catch(e){
-    // Trello injoignable : on continue avec la dernière copie connue plutôt
-    // que de perdre l'affichage. L'écriture retentera au prochain changement.
     showError("Mémoire partagée illisible, utilisation de la copie locale : " + e.message);
     return loadJSON(STATE_CACHE_KEY, emptyState());
   }
 }
-
 let writeChain = Promise.resolve();
 function writeState(){
-  // Les écritures s'enchaînent une par une : deux changements rapprochés ne
-  // peuvent pas s'écraser mutuellement. Chacune relit la version distante
-  // avant d'écrire, pour ne pas perdre ce qu'un autre poste aurait ajouté.
+  // Les écritures s'enchaînent : chacune relit la version distante avant
+  // d'écrire, pour ne pas écraser ce qu'un autre poste aurait ajouté.
   saveJSON(STATE_CACHE_KEY, state);
   writeChain = writeChain.then(async () => {
     if(!stateCardId) return;
     try{
       const remote = decodeState((await api(`/cards/${stateCardId}`, "GET", "fields=desc")).desc);
-      const merged = mergeStates(remote, state);
-      state = merged;
-      saveJSON(STATE_CACHE_KEY, merged);
-      await api(`/cards/${stateCardId}`, "PUT", `desc=${encodeURIComponent(encodeState(merged))}`);
+      state = mergeStates(remote, state);
+      saveJSON(STATE_CACHE_KEY, state);
+      await api(`/cards/${stateCardId}`, "PUT", `desc=${encodeURIComponent(encodeState(state))}`);
     }catch(e){
-      showError("La mémoire n'a pas pu être enregistrée dans Trello (le classement, lui, est bien enregistré) : " + e.message);
+      showError("La mémoire n'a pas pu être enregistrée (le classement, lui, est bien dans Trello) : " + e.message);
     }
   }).catch(() => {});
   return writeChain;
 }
-
-// Fusion de deux versions de la mémoire : on ne perd jamais une entrée de
-// journal, et pour une même carte on garde la date d'entrée en Q1 la plus
-// ancienne, celle qui dit la vérité sur l'ancienneté.
 function mergeStates(a, b){
   const q1since = {...a.q1since};
   Object.entries(b.q1since || {}).forEach(([id, ts]) => {
     q1since[id] = (q1since[id] && q1since[id] < ts) ? q1since[id] : ts;
   });
   const seen = new Set(), log = [];
-  [...(a.log || []), ...(b.log || [])].forEach(e => {
+  [...(a.log||[]), ...(b.log||[])].forEach(e => {
     const k = e.id + "|" + e.doneAt;
     if(!seen.has(k)){ seen.add(k); log.push(e); }
   });
-  const cutoff = Date.now() - RETENTION_J * 86400000;
+  const cutoff = Date.now() - RETENTION_J*86400000;
   return {
     q1since,
     log: log.filter(e => new Date(e.doneAt).getTime() >= cutoff),
-    snapshot: {...a.snapshot, ...b.snapshot}
+    snapshot:{...a.snapshot, ...b.snapshot},
+    noms:{...a.noms, ...b.noms},
+    quads:{...a.quads, ...b.quads}
   };
 }
 
@@ -379,7 +572,7 @@ const $ = s => document.querySelector(s);
 function setStatus(m){ $("#status").textContent = m || ""; }
 function showError(m){
   let b = $("#errbar");
-  if(!b){ b = document.createElement("div"); b.id="errbar"; b.className="err"; $("#app").insertBefore(b, $("main")); }
+  if(!b){ b = document.createElement("div"); b.id="errbar"; b.className="erreur"; $("#app").insertBefore(b, $("main")); }
   b.textContent = m;
 }
 function clearError(){ const b = $("#errbar"); if(b) b.remove(); }
@@ -390,16 +583,14 @@ $("#logout").onclick = () => { localStorage.removeItem(LS); location.reload(); }
 $("#reload").onclick = () => load();
 $("#search").oninput = render;
 $("#listfilter").onchange = render;
-
-// Porte de secours : jeton collé à la main.
 $("#manualgo").onclick = async () => {
   const token = $("#t").value.trim();
   if(!token){ $("#setupmsg").textContent = "Colle d'abord le code affiché par Trello."; return; }
-  await tryAuth(token, "Code refusé par Trello. Vérifie que tu as bien copié le code en entier.");
+  await tryAuth(token, "Code refusé par Trello. Vérifie que tu l'as copié en entier.");
 };
 
 async function tryAuth(token, echec){
-  auth = {key: TRELLO_KEY, token};
+  auth = {key:TRELLO_KEY, token};
   $("#setupmsg").textContent = "Vérification…";
   try{
     await api(`/boards/${BOARD}`, "GET", "fields=name");
@@ -408,17 +599,13 @@ async function tryAuth(token, echec){
     return true;
   }catch(e){
     auth = null;
-    $("#setupmsg").textContent = echec + " (" + e.message.slice(0, 80) + ")";
+    $("#setupmsg").textContent = echec + " (" + e.message.slice(0,80) + ")";
     $("#fallback").open = true;
     return false;
   }
 }
 
 (function boot(){
-  // Retour de Trello après clic sur "Se connecter" : le jeton arrive dans le
-  // fragment d'URL (#token=...), jamais dans l'historique serveur. On accepte
-  // aussi ?token= au cas où, et n'importe quel format de jeton : le seul juge
-  // de sa validité, c'est Trello lui-même à l'appel suivant.
   const brut = location.hash + "&" + location.search;
   const m = /[#?&]token=([^&#\s]+)/.exec(brut);
   if(m){
@@ -428,16 +615,10 @@ async function tryAuth(token, echec){
   }
   const saved = localStorage.getItem(LS);
   if(saved){
-    try{
-      auth = JSON.parse(saved);
-      if(auth && auth.token){ start(); return; }
-    }catch(e){}
+    try{ auth = JSON.parse(saved); if(auth && auth.token){ start(); return; } }catch(e){}
   }
-  // Arrivée sans jeton alors qu'on revient manifestement de Trello : le retour
-  // automatique a été refusé, on oriente tout de suite vers la porte de secours
-  // plutôt que de laisser tourner en rond sur le même bouton.
   if(document.referrer.includes("trello.com")){
-    $("#setupmsg").textContent = "Trello a bien validé l'autorisation, mais n'a pas renvoyé le code à cette page. Utilise la méthode ci-dessous, elle marche à tous les coups.";
+    $("#setupmsg").textContent = "Trello a validé l'autorisation, mais n'a pas renvoyé le code à cette page. Utilise la méthode ci-dessous, elle marche à tous les coups.";
     $("#fallback").open = true;
   }
 })();
@@ -461,11 +642,10 @@ async function load(){
       id:c.id, name:c.name, list:byList[c.idList] || "?", due:c.due, dueComplete:c.dueComplete,
       url:c.shortUrl, labels:c.idLabels || [], quad:quadOf(c.idLabels || [])
     }));
-    state = await readState();   // un seul appel, quel que soit le nombre de cartes
+    state = await readState();
     trackHistory();
     const sel = $("#listfilter"), prev = sel.value;
-    sel.innerHTML = `<option value="">Toutes les listes</option>` +
-      lists.map(l => `<option>${esc(l.name)}</option>`).join("");
+    sel.innerHTML = `<option value="">Toutes les listes</option>` + lists.map(l => `<option>${esc(l.name)}</option>`).join("");
     sel.value = prev || "";
     setStatus(`${cards.length} cartes`);
     render();
@@ -478,8 +658,6 @@ async function ensureLabels(){
     const hit = existing.find(l => l.name === def.name);
     if(hit){
       labelIds[def.q] = hit.id;
-      // Rattrape une étiquette créée avec l'ancienne couleur, sans la recréer :
-      // l'identifiant reste le même, les cartes déjà classées ne bougent pas.
       if(hit.color !== def.color) await api(`/labels/${hit.id}`, "PUT", `color=${def.color}`);
       continue;
     }
@@ -493,308 +671,434 @@ function quadOf(ids){
   return 0;
 }
 
-/* ---------- suivi de l'historique ----------
-   Comparaison entre l'état vu au chargement précédent (mémorisé dans la carte
-   mémoire, donc partagé entre postes) et l'état actuel : une carte qui bascule
-   vers la liste Fait devient un point du bilan ; une carte entrée en Q1 est
-   datée. Le classement fait depuis un autre poste, ou directement dans Trello
-   à la main, est donc rattrapé ici. */
+/* ---------- suivi de l'historique ---------- */
 function trackHistory(){
   const snapBefore = state.snapshot || {};
   let changed = false;
+  const dejaVues = new Set(state.log.map(e => e.id));
 
   cards.forEach(c => {
-    const prevList = snapBefore[c.id];
-    if(prevList && prevList !== "Fait" && c.list === "Fait"){
-      state.log.push({id:c.id, name:c.name, quad:c.quad, doneAt: nowISO()});
-      changed = true;
+    const prev = snapBefore[c.id];
+    if(prev && prev !== "Fait" && c.list === "Fait" && !dejaVues.has(c.id)){
+      state.log.push({id:c.id, name:c.name, quad:c.quad, doneAt:nowISO(), via:"fait"});
+      dejaVues.add(c.id); changed = true;
     }
   });
 
   const snapAfter = {};
   cards.forEach(c => { snapAfter[c.id] = c.list; });
+  const ids = new Set(cards.map(c => c.id));
+
+  // Disparues des cartes ouvertes : archivées dans Trello. Elles quittent la
+  // matrice, mais laissent une trace de leur passage et de leur quadrant.
+  Object.keys(snapBefore).forEach(id => {
+    if(ids.has(id)) return;
+    if(!dejaVues.has(id)){
+      state.log.push({
+        id,
+        name:(state.noms && state.noms[id]) || "(carte archivée)",
+        quad: state.q1since[id] ? 1 : (state.quads && state.quads[id]) || 0,
+        doneAt: nowISO(), via:"archive"
+      });
+      dejaVues.add(id);
+    }
+    changed = true;
+  });
+
+  state.noms = {}; state.quads = {};
+  cards.forEach(c => { state.noms[c.id] = c.name; state.quads[c.id] = c.quad; });
+
   if(JSON.stringify(snapAfter) !== JSON.stringify(snapBefore)) changed = true;
   state.snapshot = snapAfter;
 
-  const ids = new Set(cards.map(c => c.id));
-  Object.keys(state.q1since).forEach(id => {
-    if(!ids.has(id)){ delete state.q1since[id]; changed = true; }
-  });
+  Object.keys(state.q1since).forEach(id => { if(!ids.has(id)){ delete state.q1since[id]; changed = true; } });
   cards.forEach(c => {
     if(c.quad === 1 && !state.q1since[c.id]){ state.q1since[c.id] = nowISO(); changed = true; }
     if(c.quad !== 1 && state.q1since[c.id]){ delete state.q1since[c.id]; changed = true; }
   });
 
-  const cutoff = Date.now() - RETENTION_J * 86400000;
+  const cutoff = Date.now() - RETENTION_J*86400000;
   const pruned = state.log.filter(e => new Date(e.doneAt).getTime() >= cutoff);
   if(pruned.length !== state.log.length){ state.log = pruned; changed = true; }
 
-  // Une seule écriture, et seulement si quelque chose a réellement bougé.
   if(changed) writeState();
 }
 
-/* ---------- changement de quadrant, partagé glisser-déposer + tri éclair ---------- */
-async function setQuad(card, newQuad){
+/* ---------- changement de quadrant ---------- */
+async function setQuad(card, newQuad, sansUndo){
   const before = card.quad;
   if(before === newQuad) return true;
   card.quad = newQuad;
   if(newQuad === 1) state.q1since[card.id] = nowISO(); else delete state.q1since[card.id];
+  if(!sansUndo){ undoPile.push({id:card.id, before}); majUndo(); }
   render();
-  setStatus("Enregistrement dans Trello…"); clearError();
+  setStatus("Enregistrement…"); clearError();
   try{
     if(before) await api(`/cards/${card.id}/idLabels/${labelIds[before]}`, "DELETE");
     if(newQuad) await api(`/cards/${card.id}/idLabels`, "POST", `value=${labelIds[newQuad]}`);
-    writeState();   // la date d'entrée en Q1 part dans la mémoire partagée
-    setStatus(`${cards.length} cartes, enregistré`);
+    writeState();
+    setStatus(`${cards.length} cartes`);
     return true;
   }catch(err){
     card.quad = before;
     if(before === 1) state.q1since[card.id] = state.q1since[card.id] || nowISO(); else delete state.q1since[card.id];
+    if(!sansUndo){ undoPile.pop(); majUndo(); }
     render();
     showError("Trello a refusé le changement, la carte est remise où elle était : " + err.message);
     setStatus("");
     return false;
   }
 }
+function majUndo(){ $("#btnUndo").disabled = undoPile.length === 0; }
+$("#btnUndo").onclick = async () => {
+  const last = undoPile.pop(); majUndo();
+  if(!last) return;
+  const card = cards.find(c => c.id === last.id);
+  if(card) await setQuad(card, last.before, true);
+};
 
 /* ---------- affichage ---------- */
 function esc(s){ return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
-function dueLabel(c){
+function echeance(c){
   if(!c.due) return null;
-  const d = new Date(c.due), now = new Date();
-  const days = Math.round((d - now)/86400000);
+  const d = new Date(c.due);
+  const jours = Math.round((d - new Date())/86400000);
   const txt = d.toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit"});
-  return {txt: days < 0 ? `${txt} (en retard)` : txt, late: days < 0 && !c.dueComplete};
+  return {txt: jours < 0 ? `${txt} en retard` : txt, retard: jours < 0 && !c.dueComplete};
 }
-function tile(c){
+function joursEnQ1(c){
+  if(c.quad !== 1 || !state.q1since[c.id]) return 0;
+  return Math.floor((Date.now() - new Date(state.q1since[c.id]).getTime())/86400000);
+}
+
+function fiche(c, index){
   const el = document.createElement("div");
-  el.className = "tile"; el.draggable = true; el.dataset.id = c.id;
-  const d = dueLabel(c);
-  let staleHtml = "";
-  if(c.quad === 1 && state.q1since[c.id]){
-    const days = Math.floor((Date.now() - new Date(state.q1since[c.id]).getTime()) / 86400000);
-    if(days >= SEUIL_STALE) staleHtml = `<span class="due late">⚠ ${days} j en Q1</span>`;
-  }
-  el.innerHTML = `<div>${esc(c.name)}</div><div class="meta">
-      <span>${esc(c.list)}</span>
-      ${d ? `<span class="due${d.late?" late":""}">${esc(d.txt)}</span>` : ""}
-      ${staleHtml}
-      <a class="open" href="${c.url}" target="_blank" rel="noopener" title="Ouvrir dans Trello">↗</a></div>`;
-  el.addEventListener("dragstart", e => { e.dataTransfer.setData("text/plain", c.id); el.classList.add("dragging"); });
-  el.addEventListener("dragend", () => el.classList.remove("dragging"));
+  el.className = "fiche" + (premierRendu ? " pose" : "");
+  if(premierRendu) el.style.animationDelay = Math.min(index, 18) * 22 + "ms";
+  el.draggable = true; el.dataset.id = c.id; el.tabIndex = 0;
+  el.setAttribute("role","button");
+  el.setAttribute("aria-label", `${c.name}. ${QNOM[c.quad]}. Touches 1 à 4 pour classer.`);
+
+  const e = echeance(c), dort = joursEnQ1(c);
+  el.innerHTML = `
+    <div class="nom">${esc(c.name)}</div>
+    <button class="ranger" title="Classer cette carte" aria-label="Classer ${esc(c.name)}">⋮</button>
+    <div class="meta">
+      <span class="liste">${esc(c.list)}</span>
+      ${e ? `<span class="ech${e.retard?" retard":""}">${esc(e.txt)}</span>` : ""}
+      ${dort >= SEUIL_STALE ? `<span class="dort">${dort} j sans bouger</span>` : ""}
+    </div>`;
+
+  el.addEventListener("dragstart", ev => { ev.dataTransfer.setData("text/plain", c.id); el.classList.add("prise"); });
+  el.addEventListener("dragend", () => el.classList.remove("prise"));
+  el.querySelector(".ranger").onclick = ev => { ev.stopPropagation(); ouvrirMenu(el, c); };
+  el.addEventListener("keydown", ev => {
+    if(ev.key >= "1" && ev.key <= "4"){ ev.preventDefault(); setQuad(c, +ev.key); }
+    else if(ev.key === "0"){ ev.preventDefault(); setQuad(c, 0); }
+    else if(ev.key === "Enter" || ev.key === " "){ ev.preventDefault(); ouvrirMenu(el, c); }
+  });
   return el;
 }
+
+function ouvrirMenu(ancre, c){
+  fermerMenus();
+  const m = document.createElement("div");
+  m.className = "menu";
+  m.innerHTML = [1,2,3,4].map(q =>
+    `<button data-q="${q}"><span class="puce" style="background:var(--q${q})"></span>${QNUM[q]}. ${QNOM[q]}<span class="touche">${q}</span></button>`
+  ).join("")
+    + `<button data-q="0"><span class="puce" style="background:var(--filet-fort)"></span>Retirer du classement<span class="touche">0</span></button>`
+    + `<div class="sep"></div>`
+    + `<a href="${c.url}" target="_blank" rel="noopener">Ouvrir dans Trello ↗</a>`;
+  ancre.appendChild(m);
+  m.querySelectorAll("button").forEach(b => {
+    b.onclick = ev => { ev.stopPropagation(); fermerMenus(); setQuad(c, +b.dataset.q); };
+  });
+  m.querySelector("button").focus();
+}
+function fermerMenus(){ document.querySelectorAll(".menu").forEach(m => m.remove()); }
+document.addEventListener("click", e => { if(!e.target.closest(".menu,.ranger")) fermerMenus(); });
+
 function render(){
-  const term = $("#search").value.trim().toLowerCase();
-  const listSel = $("#listfilter").value;
-  const shown = cards.filter(c =>
-    (!term || c.name.toLowerCase().includes(term)) && (!listSel || c.list === listSel));
-  document.querySelectorAll(".drop").forEach(z => {
+  const terme = $("#search").value.trim().toLowerCase();
+  const liste = $("#listfilter").value;
+  const vues = cards.filter(c => (!terme || c.name.toLowerCase().includes(terme)) && (!liste || c.list === liste));
+
+  document.querySelectorAll(".zone").forEach(z => {
     const q = +z.dataset.q;
-    const items = shown.filter(c => c.quad === q);
+    const items = vues.filter(c => c.quad === q).sort((a,b) => {
+      const ra = a.due ? new Date(a.due).getTime() : Infinity;
+      const rb = b.due ? new Date(b.due).getTime() : Infinity;
+      return ra - rb;
+    });
     z.innerHTML = "";
     if(!items.length){
-      const e = document.createElement("div"); e.className = "empty";
-      e.textContent = q === 0 ? "Tout est placé." : "Glisse une carte ici.";
-      z.appendChild(e);
-    } else items.forEach(c => z.appendChild(tile(c)));
-    if(q > 0) document.querySelector(`#q${q} .n`).textContent = items.length || "";
+      const v = document.createElement("div"); v.className = "vide";
+      v.textContent = q === 0 ? "Le tas est vide. Tout a trouvé sa place." : "Rien ici pour l'instant.";
+      z.appendChild(v);
+    } else items.forEach((c, i) => z.appendChild(fiche(c, i)));
+    if(q > 0) document.querySelector(`#q${q} .nb`).textContent = items.length || "";
   });
-  $("#poolcount").textContent = `${shown.filter(c => c.quad === 0).length} carte(s) sans quadrant`;
 
-  // L'alerte "Q1 déborde" porte sur le vrai total, pas sur ce que le filtre
-  // ou la recherche laissent visible : un Q1 trop plein reste trop plein
-  // même quand on ne regarde qu'un mot-clé.
+  const aPlacer = vues.filter(c => c.quad === 0).length;
+  $("#poolnb").textContent = aPlacer;
+  $("#poolnb").classList.toggle("vide", aPlacer === 0);
+  $("#poolsub").textContent = aPlacer === 0 ? "rien à trier" : (aPlacer === 1 ? "carte sans quadrant" : "cartes sans quadrant");
+
+  // Boutons conscients de l'état : ne jamais proposer une action terminée.
+  const bt = $("#btnTriage");
+  bt.disabled = aPlacer === 0;
+  bt.innerHTML = aPlacer === 0 ? "Tout est trié" : `Tri éclair <span class="btn-compte">${aPlacer}</span>`;
+  bt.title = aPlacer === 0 ? "Plus aucune carte à trier" : `${aPlacer} carte(s) à passer en revue`;
+
+  // L'alerte porte sur le vrai total, pas sur ce que le filtre laisse voir.
   const q1Total = cards.filter(c => c.quad === 1).length;
-  const warn = $("#q1warn");
-  if(warn){
-    if(q1Total > SEUIL_Q1){ warn.hidden = false; warn.textContent = `déborde (${q1Total}) — tout n'est pas urgent`; }
-    else warn.hidden = true;
-  }
+  const al = $("#q1alerte");
+  if(q1Total > SEUIL_Q1){ al.hidden = false; al.textContent = `${q1Total} urgences, ce n'est plus une priorité`; }
+  else al.hidden = true;
+
+  premierRendu = false;
 }
 
 /* ---------- glisser-déposer ---------- */
 document.addEventListener("dragover", e => {
-  const z = e.target.closest(".drop"); if(!z) return;
-  e.preventDefault(); z.classList.add("over");
+  const z = e.target.closest(".zone"); if(!z) return;
+  e.preventDefault(); z.classList.add("survol");
 });
 document.addEventListener("dragleave", e => {
-  const z = e.target.closest(".drop"); if(z) z.classList.remove("over");
+  const z = e.target.closest(".zone"); if(z) z.classList.remove("survol");
 });
 document.addEventListener("drop", async e => {
-  const z = e.target.closest(".drop"); if(!z) return;
-  e.preventDefault(); z.classList.remove("over");
-  const id = e.dataTransfer.getData("text/plain");
-  const card = cards.find(c => c.id === id);
-  const target = +z.dataset.q;
-  if(!card) return;
-  await setQuad(card, target);
+  const z = e.target.closest(".zone"); if(!z) return;
+  e.preventDefault(); z.classList.remove("survol");
+  const card = cards.find(c => c.id === e.dataTransfer.getData("text/plain"));
+  if(card) await setQuad(card, +z.dataset.q);
 });
 
-/* ---------- fenêtres modales ---------- */
-function openModal(html){
-  $("#modalBody").innerHTML = `<button class="close" id="modalClose" title="Fermer (Échap)">✕</button>` + html;
-  $("#overlay").hidden = false;
-  $("#modalClose").onclick = closeModal;
+/* ---------- scènes plein écran ---------- */
+function ouvrirScene(lab, html, compte, progression){
+  $("#sceneLab").textContent = lab;
+  $("#sceneCompte").textContent = compte || "";
+  $("#sceneJauge").style.width = (progression || 0) + "%";
+  $("#sceneCorps").innerHTML = html;
+  $("#scene").hidden = false;
 }
-function closeModal(){
-  $("#overlay").hidden = true;
-  $("#modalBody").innerHTML = "";
-  triageState = null;
-}
-$("#overlay").addEventListener("click", e => { if(e.target.id === "overlay") closeModal(); });
+function fermerScene(){ $("#scene").hidden = true; $("#sceneCorps").innerHTML = ""; triageState = null; }
+$("#sceneClose").onclick = fermerScene;
 document.addEventListener("keydown", e => {
-  if($("#overlay").hidden) return;
-  if(e.key === "Escape"){ closeModal(); return; }
+  if(e.key === "z" && (e.ctrlKey || e.metaKey)){ e.preventDefault(); $("#btnUndo").click(); return; }
+  if($("#scene").hidden) return;
+  if(e.key === "Escape"){ fermerScene(); return; }
   if(triageState){
     const k = e.key.toLowerCase();
-    if(e.key === "ArrowRight" || k === "o"){ e.preventDefault(); answerTriage(true); }
-    else if(e.key === "ArrowLeft" || k === "n"){ e.preventDefault(); answerTriage(false); }
+    if(e.key === "ArrowRight" || k === "o"){ e.preventDefault(); repondre(true); }
+    else if(e.key === "ArrowLeft" || k === "n"){ e.preventDefault(); repondre(false); }
   }
 });
 
-/* ---------- tri éclair : ne repasse que sur les cartes sans quadrant ---------- */
-$("#btnTriage").onclick = () => {
-  const queue = cards.filter(c => c.quad === 0).map(c => c.id);
-  if(!queue.length){
-    openModal(`<h3>Tri éclair</h3><p>Rien à trier, toutes les cartes ont déjà un quadrant.</p>`);
-    return;
-  }
-  triageState = {queue, index:0, step:"urgent"};
-  renderTriage();
-};
-function renderTriage(){
-  const st = triageState;
-  if(!st){ return; }
-  if(st.index >= st.queue.length){
-    openModal(`<h3>Tri éclair terminé</h3><p>${st.queue.length} carte(s) passée(s) en revue.</p>`);
-    triageState = null;
-    return;
-  }
-  const card = cards.find(c => c.id === st.queue[st.index]);
-  if(!card || card.quad !== 0){
-    // classée entretemps par un glisser-déposer pendant la séance : on saute
-    st.index++; renderTriage(); return;
-  }
-  const d = dueLabel(card);
-  const question = st.step === "urgent" ? "C'est urgent ?" : "Fort impact business ?";
-  openModal(`
-    <h3>Tri éclair</h3>
-    <div class="step">Carte ${st.index + 1} / ${st.queue.length}</div>
-    <div class="triagecard">
-      <div class="name">${esc(card.name)}</div>
-      <div class="meta">${esc(card.list)}${d ? " · échéance " + esc(d.txt) : " · sans échéance"}</div>
-    </div>
-    <p class="qprompt">${question}</p>
-    <div class="bigchoice">
-      <button class="no" id="triNo">Non</button>
-      <button class="yes" id="triYes">Oui</button>
-    </div>
-    <div class="skiprow"><button id="triSkip">Passer cette carte</button></div>
-    <div class="kbdhint">Raccourcis : O (oui) · N (non) · Échap pour arrêter</div>
-  `);
-  $("#triYes").onclick = () => answerTriage(true);
-  $("#triNo").onclick = () => answerTriage(false);
-  $("#triSkip").onclick = () => { st.index++; st.step = "urgent"; delete st.urgent; renderTriage(); };
+/* ---------- tri éclair : la pièce maîtresse ---------- */
+function miniMatrice(compteurs, anime){
+  return `<div class="mini">` + [1,2,3,4].map(q =>
+    `<div class="${anime === q ? "pulse" : ""}">
+       <span class="n" style="color:var(--q${q})">${QNUM[q]}</span>
+       <span class="t">${QNOM[q]}</span>
+       <span class="c ${anime === q ? "saute" : ""}">${compteurs[q]}</span>
+     </div>`).join("") + `</div>`;
 }
-async function answerTriage(yes){
-  const st = triageState; if(!st) return;
-  if(st.step === "urgent"){
-    st.urgent = yes; st.step = "impact"; renderTriage(); return;
-  }
-  const quad = st.urgent ? (yes ? 1 : 3) : (yes ? 2 : 4);
-  const card = cards.find(c => c.id === st.queue[st.index]);
-  if(card) await setQuad(card, quad);
-  st.index++; st.step = "urgent"; delete st.urgent;
-  renderTriage();
+function compteursActuels(){
+  const c = {1:0,2:0,3:0,4:0};
+  cards.forEach(x => { if(c[x.quad] !== undefined) c[x.quad]++; });
+  return c;
 }
 
-/* ---------- "je fais quoi là ?" : 3 cartes, calculées en local, pas d'appel réseau ---------- */
+$("#btnTriage").onclick = () => {
+  const file = cards.filter(c => c.quad === 0).map(c => c.id);
+  if(!file.length) return;
+  triageState = {file, index:0, etape:"urgent", debut:Date.now(), places:{1:0,2:0,3:0,4:0}, passees:0};
+  rendreTriage();
+};
+
+function rendreTriage(anime){
+  const st = triageState; if(!st) return;
+  if(st.index >= st.file.length){ finTriage(); return; }
+  const card = cards.find(c => c.id === st.file[st.index]);
+  if(!card || (card.quad !== 0 && !anime)){ st.index++; rendreTriage(); return; }
+
+  const e = echeance(card);
+  const question = st.etape === "urgent"
+    ? "Est-ce que ça doit être fait bientôt ?"
+    : "Est-ce que ça pèse sur ton activité ?";
+  const progression = Math.round(st.index / st.file.length * 100);
+
+  ouvrirScene("Tri éclair", `
+    <div class="fiche-scene" id="ficheScene">
+      <div class="nom">${esc(card.name)}</div>
+      <div class="meta">${esc(card.list)}${e ? " · échéance " + esc(e.txt) : " · sans échéance"}</div>
+    </div>
+    <p class="question">${question}</p>
+    <div class="choix">
+      <button class="non" id="triNon">Non</button>
+      <button class="oui" id="triOui">Oui</button>
+    </div>
+    <p class="raccourci">Au clavier : <b>O</b> oui, <b>N</b> non, <b>Échap</b> pour arrêter. Ton avancée est enregistrée au fur et à mesure.</p>
+    ${miniMatrice(compteursActuels(), anime)}
+  `, `${st.index + 1} sur ${st.file.length}`, progression);
+
+  $("#triOui").onclick = () => repondre(true);
+  $("#triNon").onclick = () => repondre(false);
+}
+
+async function repondre(oui){
+  const st = triageState; if(!st) return;
+  if(st.etape === "urgent"){ st.urgent = oui; st.etape = "impact"; rendreTriage(); return; }
+
+  const quad = st.urgent ? (oui ? 1 : 3) : (oui ? 2 : 4);
+  const card = cards.find(c => c.id === st.file[st.index]);
+
+  // La fiche part se ranger : le mouvement dit où elle va, il ne décore pas.
+  const el = $("#ficheScene");
+  const bouge = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if(el && bouge){
+    const dx = (quad === 1 || quad === 3) ? "-24%" : "24%";
+    const dy = (quad === 1 || quad === 2) ? "26%" : "42%";
+    el.classList.add("envol");
+    el.style.transform = `translate(${dx}, ${dy}) scale(.42) rotate(${quad % 2 ? -2 : 2}deg)`;
+    el.style.opacity = "0";
+    await new Promise(r => setTimeout(r, bouge ? 300 : 0));
+  }
+
+  if(card) await setQuad(card, quad, true);   // séance de tri : pas d'empilement d'annulations
+  st.places[quad]++; st.passees++;
+  st.index++; st.etape = "urgent"; delete st.urgent;
+  rendreTriage(quad);
+  // le petit saut du compteur ne dure que le temps d'être vu
+  setTimeout(() => document.querySelectorAll(".mini .saute,.mini .pulse")
+    .forEach(n => n.classList.remove("saute","pulse")), 320);
+}
+
+function finTriage(){
+  const st = triageState;
+  const minutes = Math.max(1, Math.round((Date.now() - st.debut)/60000));
+  const total = st.passees;
+  const restant = cards.filter(c => c.quad === 0).length;
+  triageState = null;
+
+  const lignes = [1,2,3,4].map(q => {
+    const n = st.places[q] || 0;
+    const pct = total ? Math.round(n/total*100) : 0;
+    return `<div class="ligne">
+      <span class="puce" style="background:var(--q${q})"></span>
+      <span class="lab">${QNOM[q]}</span>
+      <span class="barre"><i style="width:${pct}%;background:var(--q${q})"></i></span>
+      <span class="n">${n}</span></div>`;
+  }).join("");
+
+  const q1 = st.places[1] || 0;
+  const verdict = !total ? "Rien de classé cette fois."
+    : q1 > SEUIL_Q1 ? `${q1} cartes en « faire maintenant ». Quand tout est urgent, plus rien ne l'est : ce quadrant mérite un second passage.`
+    : q1 === 0 ? "Aucune urgence sortie de ce tri. C'est une bonne nouvelle, profites-en pour attaquer le quadrant Planifier."
+    : `${q1} vraie${q1>1?"s":""} urgence${q1>1?"s":""} sur ${total} cartes. C'est une proportion tenable.`;
+
+  ouvrirScene("Séance terminée", `
+    <div class="stat">
+      <h3>${total} carte${total>1?"s":""} rangée${total>1?"s":""}</h3>
+      <p class="sous">en ${minutes} minute${minutes>1?"s":""}${restant ? `, il en reste ${restant} au tas` : ", le tas est vide"}</p>
+      ${lignes}
+      <p class="verdict">${verdict}</p>
+      <p style="margin-top:26px"><button class="btn-plein" id="finFerme">Voir la matrice</button>
+      ${restant ? ` <button id="finSuite">Continuer le tri</button>` : ""}</p>
+    </div>`, "", 100);
+
+  $("#finFerme").onclick = fermerScene;
+  const suite = $("#finSuite");
+  if(suite) suite.onclick = () => { fermerScene(); $("#btnTriage").click(); };
+}
+
+/* ---------- je fais quoi là ---------- */
 $("#btnFocus").onclick = () => {
-  const qName = {1:"Faire maintenant", 2:"Planifier", 3:"Expédier", 4:"Laisser tomber"};
-  const scoreOf = c => {
-    if(c.quad === 0 || c.quad === 4) return null; // pas encore trié, ou volontairement laissé tomber
-    let base = c.quad === 1 ? 0 : c.quad === 3 ? 20 : 30; // Q1 < Q3 < Q2 par défaut
+  const score = c => {
+    if(c.quad === 0 || c.quad === 4) return null;   // pas trié, ou volontairement écarté
+    let base = c.quad === 1 ? 0 : c.quad === 3 ? 20 : 30;
     if(c.due){
-      const days = (new Date(c.due) - Date.now()) / 86400000;
-      base = days < 0 ? -100 + days : base + days; // en retard : toujours devant, peu importe le quadrant
-    } else base += 999; // sans échéance : après celles qui en ont, dans son groupe
+      const j = (new Date(c.due) - Date.now())/86400000;
+      base = j < 0 ? -100 + j : base + j;           // en retard : toujours devant
+    } else base += 999;
     return base;
   };
-  const ranked = cards
-    .map(c => ({c, s: scoreOf(c)}))
-    .filter(x => x.s !== null)
-    .sort((a, b) => a.s - b.s)
-    .slice(0, 3)
-    .map(x => x.c);
+  const trois = cards.map(c => ({c, s:score(c)})).filter(x => x.s !== null)
+    .sort((a,b) => a.s - b.s).slice(0,3).map(x => x.c);
 
-  const items = ranked.length
-    ? ranked.map(c => {
-        const d = dueLabel(c);
-        return `<div class="focusitem" style="border-left-color:var(--q${c.quad})">
-          <div class="qtag" style="color:var(--q${c.quad})">${qName[c.quad]}</div>
-          <div>${esc(c.name)}</div>
-          <div class="meta">${esc(c.list)}${d ? " · " + esc(d.txt) : ""}
-            <a class="open" href="${c.url}" target="_blank" rel="noopener">↗</a></div>
-        </div>`;
-      }).join("")
-    : `<p>Rien en attente en Q1, Q2 ou Q3.</p>`;
+  const rangs = ["D'abord","Ensuite","Puis"];
+  const corps = trois.length ? trois.map((c,i) => {
+    const e = echeance(c);
+    return `<div class="focus-item" style="border-left-color:var(--q${c.quad})">
+      <div class="rang" style="color:var(--q${c.quad})">${rangs[i]} · ${QNOM[c.quad]}</div>
+      <div class="nom">${esc(c.name)}</div>
+      <div class="meta">${esc(c.list)}${e ? " · " + esc(e.txt) : ""} · <a href="${c.url}" target="_blank" rel="noopener">ouvrir dans Trello ↗</a></div>
+    </div>`;
+  }).join("") : `<p class="vide">Rien en attente dans les trois premiers quadrants.</p>`;
 
-  const untriaged = cards.filter(c => c.quad === 0).length;
-  const hint = untriaged
-    ? `<p style="font-size:13px;color:var(--muted);margin-top:16px">${untriaged} carte(s) pas encore triée(s), donc pas prises en compte ici.
-       <button id="focusToTriage" style="padding:4px 10px;font-size:12.5px;display:block;margin-top:8px">Lancer le tri éclair</button></p>`
-    : "";
-  openModal(`<h3>Je fais quoi là ?</h3>${items}${hint}`);
-  const btn = $("#focusToTriage");
-  if(btn) btn.onclick = () => { closeModal(); $("#btnTriage").click(); };
+  const aPlacer = cards.filter(c => c.quad === 0).length;
+  const appoint = aPlacer
+    ? `<p class="appoint">${aPlacer} carte(s) pas encore triée(s), donc absentes de ce calcul. <button id="focusTri" style="margin-left:8px">Trier maintenant</button></p>` : "";
+
+  ouvrirScene("Maintenant", `<div class="stat">
+      <h3>Trois choses</h3>
+      <p class="sous">les retards d'abord, puis l'urgence, puis l'important</p>
+      ${corps}${appoint}
+    </div>`, "", 100);
+
+  const b = $("#focusTri");
+  if(b) b.onclick = () => { fermerScene(); $("#btnTriage").click(); };
 };
 
-/* ---------- bilan hebdo : lu depuis l'historique local, pas depuis Trello ---------- */
+/* ---------- bilan hebdo ---------- */
 $("#btnBilan").onclick = () => {
-  const qName = {1:"Faire maintenant", 2:"Planifier", 3:"Expédier", 4:"Laisser tomber"};
   const log = state.log || [];
-  const cutoff = Date.now() - 7 * 86400000;
+  const cutoff = Date.now() - 7*86400000;
   const recent = log.filter(e => new Date(e.doneAt).getTime() >= cutoff);
-  const counts = {0:0, 1:0, 2:0, 3:0, 4:0};
-  recent.forEach(e => { counts[e.quad] = (counts[e.quad] || 0) + 1; });
+  const counts = {0:0,1:0,2:0,3:0,4:0};
+  recent.forEach(e => { counts[e.quad] = (counts[e.quad]||0)+1; });
   const total = recent.length;
 
-  let body;
+  let corps;
   if(!total){
-    body = `<p>Aucune carte déplacée vers « Fait » ces 7 derniers jours (ou pas encore observée : le bilan ne compte qu'à partir du moment où cette page a tourné et vu le changement).</p>`;
+    corps = `<div class="stat"><h3>Rien à compter</h3>
+      <p class="sous">aucune carte sortie de la matrice ces 7 derniers jours</p>
+      <p class="verdict">Le bilan ne compte que ce que l'outil a vu passer. Il se remplira à mesure que tu termines ou archives des cartes.</p></div>`;
   } else {
-    const rows = [1, 2, 3, 4].map(q => {
+    const lignes = [1,2,3,4].map(q => {
       const n = counts[q] || 0;
-      const pct = total ? Math.round(n / total * 100) : 0;
-      return `<div class="bilanrow">
-        <span class="dot" style="background:var(--q${q})"></span>
-        <span class="label">${qName[q]}</span>
-        <span class="bar"><i style="width:${pct}%;background:var(--q${q})"></i></span>
-        <span class="num">${n}</span>
-      </div>`;
+      const pct = total ? Math.round(n/total*100) : 0;
+      return `<div class="ligne">
+        <span class="puce" style="background:var(--q${q})"></span>
+        <span class="lab">${QNOM[q]}</span>
+        <span class="barre"><i style="width:${pct}%;background:var(--q${q})"></i></span>
+        <span class="n">${n}</span></div>`;
     }).join("");
-    const other = counts[0] || 0;
-    const otherLine = other
-      ? `<p style="font-size:12.5px;color:var(--muted);margin-top:10px">+ ${other} carte(s) terminée(s) sans être passée(s) par un quadrant.</p>`
-      : "";
-    const dominant = [1, 2, 3, 4].reduce((a, b) => (counts[b] || 0) > (counts[a] || 0) ? b : a, 1);
-    const comments = {
-      1: "Beaucoup de « faire maintenant » cette semaine : tu éteins des feux importants. Normal ponctuellement, à surveiller si ça dure.",
-      2: "Bon signe : l'important avance avant de devenir urgent.",
-      3: "Beaucoup d'urgent à faible impact : de l'expédition, pas forcément de la valeur.",
-      4: "Tu termines surtout des choses ni urgentes ni importantes : ça vaut le coup de se demander pourquoi elles étaient sur le tableau."
-    };
-    body = `<div class="step">${total} carte(s) terminée(s), 7 derniers jours</div>${rows}${otherLine}
-      <p class="bilancomment">${comments[dominant]}</p>`;
-  }
 
-  const earliest = log.length ? Math.min(...log.map(e => new Date(e.doneAt).getTime())) : null;
-  const young = earliest && (Date.now() - earliest) < 7 * 86400000;
-  const note = young
-    ? `<p style="font-size:12px;color:var(--muted);margin-top:14px">Historique encore court, les chiffres vont se stabiliser avec le temps.</p>`
-    : "";
-  openModal(`<h3>Bilan hebdo</h3>${body}${note}`);
+    const dominant = [1,2,3,4].reduce((a,b) => (counts[b]||0) > (counts[a]||0) ? b : a, 1);
+    const verdicts = {
+      1:"Semaine passée à éteindre des feux importants. Tenable ponctuellement, épuisant si ça dure.",
+      2:"C'est la bonne semaine : l'important a avancé avant de devenir urgent.",
+      3:"Beaucoup d'urgent à faible impact. Du mouvement, pas forcément de la valeur.",
+      4:"Tu as surtout terminé des choses ni urgentes ni importantes. La vraie question est ce qu'elles faisaient sur le tableau."
+    };
+    const autres = counts[0] || 0;
+    const archivees = recent.filter(e => e.via === "archive").length;
+    const bits = [];
+    if(autres) bits.push(`${autres} sans quadrant`);
+    if(archivees) bits.push(`${archivees} archivée(s) plutôt que passée(s) en Fait`);
+
+    corps = `<div class="stat">
+      <h3>${total} carte${total>1?"s":""}</h3>
+      <p class="sous">sorties de la matrice ces 7 derniers jours</p>
+      ${lignes}
+      <p class="verdict">${verdicts[dominant]}</p>
+      ${bits.length ? `<p class="appoint">${bits.join(", ")}. Le détail complet est dans la carte mémoire du tableau.</p>` : ""}
+    </div>`;
+  }
+  ouvrirScene("Bilan", corps, "7 derniers jours", 100);
 };
 </script>
 </body>
