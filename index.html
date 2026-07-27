@@ -388,6 +388,30 @@ a.fiche-scene:hover .lire{color:var(--encre)}
 .focus-item .nom{font-size:1.05rem;line-height:1.3}
 .focus-item .meta{font-family:var(--serif);font-style:italic;font-size:.9rem;color:var(--encre2);margin-top:6px}
 
+/* Choix des axes : on montre la grille obtenue avant de valider. */
+.modeles{display:grid;gap:14px;max-width:660px;width:100%}
+.modele{border:1px solid var(--filet);padding:16px 18px;background:#fff;text-align:left;
+  display:block;width:100%;text-transform:none;letter-spacing:0;font-size:15px;cursor:pointer}
+.modele:hover{border-color:var(--encre)}
+.modele[aria-current="true"]{border-color:var(--encre);border-width:2px;padding:15px 17px}
+.modele .titre{font-weight:800;font-size:1.05rem;display:flex;align-items:center;gap:9px;min-height:44px}
+.modele .actuel{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--q2)}
+.modele .sous{font-family:var(--serif);font-style:italic;color:var(--encre2);font-size:.95rem;margin-top:3px}
+.apercu{display:grid;grid-template-columns:auto 1fr;gap:6px;margin-top:12px;align-items:stretch}
+.apercu .ylab{writing-mode:vertical-rl;transform:rotate(180deg);font-size:9px;font-weight:600;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--encre2);display:flex;justify-content:space-between;padding:2px 0}
+.apercu .cases{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--filet);border:1px solid var(--filet)}
+.apercu .cases > div{background:var(--papier);padding:7px 9px;font-size:11.5px;font-weight:600;min-height:42px;
+  display:flex;align-items:center;gap:6px}
+.apercu .cases i{width:7px;height:7px;flex:none;font-style:normal}
+.apercu .xlab{grid-column:2;display:flex;justify-content:space-between;font-size:9px;font-weight:600;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--encre2)}
+.surmesure{display:grid;gap:9px;margin-top:14px}
+.surmesure .duo{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.surmesure label{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--encre2);display:block;margin-bottom:5px}
+.avert{font-family:var(--serif);font-style:italic;color:var(--encre2);font-size:.95rem;
+  border-left:2px solid var(--filet-fort);padding-left:14px;margin:20px 0 0;max-width:660px}
+
 /* =================== responsive =================== */
 @media (max-width:900px){
   main{grid-template-columns:1fr;grid-template-rows:auto 1fr;overflow-y:auto}
@@ -523,14 +547,50 @@ const TRELLO_KEY = "5b24411eb28ffe4530bbd50d7753a8e7";
 // Couleurs choisies pour ne PAS entrer en collision avec les étiquettes
 // thématiques du tableau (Acquisition rouge, Business jaune, Juliette verte,
 // Contenu orange, Système violet).
-const QUADS = [
-  {q:1, name:"Q1 Faire maintenant", color:"pink"},
-  {q:2, name:"Q2 Planifier",        color:"sky"},
-  {q:3, name:"Q3 Expédier",         color:"lime"},
-  {q:4, name:"Q4 Laisser tomber",   color:"black"}
-];
-const QNOM = {0:"Non classée", 1:"Faire maintenant", 2:"Planifier", 3:"Expédier", 4:"Laisser tomber"};
+const QUADS = [{q:1, color:"pink"}, {q:2, color:"sky"}, {q:3, color:"lime"}, {q:4, color:"black"}];
 const QNUM = {1:"I", 2:"II", 3:"III", 4:"IV"};
+
+/* Modèles d'axes. La géométrie ne change jamais : la colonne de gauche est
+   toujours « oui » à la première question, la ligne du haut toujours « oui »
+   à la seconde. Seuls les mots changent. C'est ce qui permet de basculer d'un
+   modèle à l'autre sans reclasser une seule carte : une carte garde sa case,
+   son étiquette Trello est simplement renommée. */
+const MODELES = {
+  eisenhower: {
+    nom: "Urgence × Impact",
+    sous: "la matrice d'Eisenhower, pour arbitrer ce qui brûle",
+    axeX: {gauche:"Urgent", droite:"Pas urgent", question:"Est-ce que ça doit être fait bientôt ?"},
+    axeY: {haut:"Fort impact", bas:"Faible impact", question:"Est-ce que ça pèse sur votre activité ?"},
+    quads: {
+      1:{nom:"Faire maintenant", def:"urgent, fort impact"},
+      2:{nom:"Planifier",        def:"fort impact, pas urgent"},
+      3:{nom:"Expédier",         def:"urgent, faible impact"},
+      4:{nom:"Laisser tomber",   def:"ni urgent, ni fort impact"}
+    }
+  },
+  impactEffort: {
+    nom: "Impact × Effort",
+    sous: "la matrice de priorisation, pour choisir par le rapport gain sur coût",
+    axeX: {gauche:"Rapide", droite:"Long", question:"Est-ce que c'est rapide à faire ?"},
+    axeY: {haut:"Fort impact", bas:"Faible impact", question:"Est-ce que ça pèse sur votre activité ?"},
+    quads: {
+      1:{nom:"Gains rapides",    def:"fort impact, peu d'effort"},
+      2:{nom:"Grands chantiers", def:"fort impact, gros effort"},
+      3:{nom:"Vite fait",        def:"faible impact, peu d'effort"},
+      4:{nom:"À éviter",         def:"faible impact, gros effort"}
+    }
+  }
+};
+const MODELE_DEFAUT = "eisenhower";
+
+let modeleId = MODELE_DEFAUT;
+let modele = MODELES[MODELE_DEFAUT];
+let QNOM = {0:"Non classée"};
+function majQNOM(){
+  QNOM = {0:"Non classée"};
+  [1,2,3,4].forEach(q => { QNOM[q] = modele.quads[q].nom; });
+}
+majQNOM();
 
 const LS = "matrice-trello-auth";
 
@@ -651,7 +711,7 @@ function demarrerDemo(){
   $("#app").style.display = "grid";
   $("#demoBar").hidden = false;
   premierRendu = true;
-  render();
+  appliquerModele(MODELE_DEFAUT, false);
   setStatus(`${cards.length} cartes d'exemple`);
 }
 
@@ -707,7 +767,12 @@ const LOG_MAX = 30;
 // on recalcule ce qui est arrivé entre-temps. Recharger la page trois fois
 // dans l'heure ne doit pas effacer ce repère.
 const SEANCE_H = 4;
-function emptyState(){ return {q1since:{}, fait:[], ids:[], log:[], seance:null}; }
+function emptyState(){
+  // `labels` retient l'identifiant Trello de chaque quadrant : les étiquettes
+  // sont renommées quand on change de modèle d'axes, donc les retrouver par
+  // leur nom ne suffit plus.
+  return {q1since:{}, fait:[], ids:[], log:[], seance:null, modele:null, labels:{}};
+}
 
 function encodeState(st){
   // Trace lisible par un humain qui ouvrirait la carte : les cartes sorties
@@ -745,7 +810,8 @@ function decodeState(desc){
     const fait = Array.isArray(p.fait) ? p.fait
       : Object.entries(p.snapshot || {}).filter(([,l]) => l === "Fait").map(([id]) => id);
     const ids = Array.isArray(p.ids) ? p.ids : Object.keys(p.snapshot || {});
-    return {q1since:p.q1since||{}, fait, ids, log:Array.isArray(p.log)?p.log:[], seance:p.seance||null};
+    return {q1since:p.q1since||{}, fait, ids, log:Array.isArray(p.log)?p.log:[],
+            seance:p.seance||null, modele:p.modele||null, labels:p.labels||{}};
   }catch(e){ return emptyState(); }
 }
 async function findOrCreateStateCard(){
@@ -821,6 +887,8 @@ function mergeStates(a, b){
     fait: [...new Set([...(a.fait||[]), ...(b.fait||[])])],
     ids: b.ids && b.ids.length ? b.ids : (a.ids || []),   // l'état local est le plus frais
     seance: b.seance || a.seance || null,
+    modele: b.modele || a.modele || null,
+    labels: {...a.labels, ...b.labels},
     log: log.filter(e => new Date(e.doneAt).getTime() >= cutoff)
            .sort((x,y) => (x.doneAt < y.doneAt ? 1 : -1)).slice(0, LOG_MAX)
   };
@@ -863,6 +931,7 @@ $("#btnPlus").onclick = ev => {
     `<button id="mAnim" role="menuitemcheckbox" aria-checked="${coupe}">
        <span class="coche">${coupe ? "✓" : ""}</span>Sans animation</button>
      <div class="sep"></div>
+     <button id="mAxes">Changer les axes…</button>
      <button id="mRecharger">Recharger depuis Trello</button>
      <button id="mSortir">Se déconnecter</button>`;
   document.body.appendChild(m);
@@ -873,6 +942,7 @@ $("#btnPlus").onclick = ev => {
     appliquerMouvement(!document.documentElement.classList.contains("sans-mouvement"));
     fermerMenus();
   };
+  $("#mAxes").onclick = () => ouvrirChoixAxes();
   $("#mRecharger").onclick = () => { fermerMenus(); if(demo) demarrerDemo(); else load(); };
   $("#mSortir").onclick = () => { localStorage.removeItem(LS); location.reload(); };
   $("#mAnim").focus();
@@ -930,15 +1000,20 @@ async function load(){
   clearError();
   setStatus("Lecture du tableau…");
   try{
-    await ensureLabels();
+    // L'ordre compte : la mémoire porte le modèle d'axes choisi et les
+    // identifiants d'étiquettes, il faut donc la lire avant de vérifier les
+    // étiquettes, sinon on les renommerait selon le mauvais modèle.
     lists = await api(`/boards/${BOARD}/lists`, "GET", "fields=id,name");
+    state = await readState();
+    await appliquerModele(state.modele || MODELE_DEFAUT, false);
+    await ensureLabels();
+
     const raw = await api(`/boards/${BOARD}/cards`, "GET", "fields=id,name,idList,due,dueComplete,shortUrl,idLabels&filter=open");
     const byList = Object.fromEntries(lists.map(l => [l.id, l.name]));
     cards = raw.map(c => ({
       id:c.id, name:c.name, list:byList[c.idList] || "?", due:c.due, dueComplete:c.dueComplete,
       url:c.shortUrl, labels:c.idLabels || [], quad:quadOf(c.idLabels || [])
     }));
-    state = await readState();
     await trackHistory();
     const sel = $("#listfilter"), prev = sel.value;
     sel.innerHTML = `<option value="">Toutes les listes</option>` + lists.map(l => `<option>${esc(l.name)}</option>`).join("");
@@ -948,18 +1023,71 @@ async function load(){
   }catch(e){ showError(e.message); setStatus(""); }
 }
 
+function nomEtiquette(q){ return `Q${q} ${modele.quads[q].nom}`; }
+
+/* Les étiquettes sont identifiées par leur identifiant mémorisé, pas par leur
+   nom : changer de modèle d'axes les renomme, et une recherche par nom
+   recréerait des doublons à chaque bascule. Le préfixe « Q1 », « Q2 »… sert
+   de repêchage pour les tableaux d'avant cette mémoire. */
 async function ensureLabels(){
   const existing = await api(`/boards/${BOARD}/labels`, "GET", "fields=id,name,color&limit=100");
+  const parId = Object.fromEntries((existing || []).map(l => [l.id, l]));
+  let memoire = (state && state.labels) || {};
+  let change = false;
+
   for(const def of QUADS){
-    const hit = existing.find(l => l.name === def.name);
+    const vise = nomEtiquette(def.q);
+    let hit = parId[memoire[def.q]];
+    if(!hit) hit = (existing || []).find(l => l.name === vise);
+    if(!hit) hit = (existing || []).find(l => l.name && l.name.startsWith(`Q${def.q} `));
+
     if(hit){
       labelIds[def.q] = hit.id;
+      if(memoire[def.q] !== hit.id){ memoire[def.q] = hit.id; change = true; }
+      if(hit.name !== vise) await api(`/labels/${hit.id}`, "PUT", `name=${encodeURIComponent(vise)}`);
       if(hit.color !== def.color) await api(`/labels/${hit.id}`, "PUT", `color=${def.color}`);
       continue;
     }
-    setStatus(`Création de l'étiquette ${def.name}…`);
-    const made = await api(`/labels`, "POST", `idBoard=${BOARD}&name=${encodeURIComponent(def.name)}&color=${def.color}`);
+    setStatus(`Création de l'étiquette ${vise}…`);
+    const made = await api(`/labels`, "POST", `idBoard=${BOARD}&name=${encodeURIComponent(vise)}&color=${def.color}`);
     labelIds[def.q] = made.id;
+    memoire[def.q] = made.id; change = true;
+  }
+  if(state){ state.labels = memoire; if(change) writeState(); }
+}
+
+/* Applique un modèle d'axes à l'interface. `ecrire` déclenche en plus le
+   renommage des étiquettes dans Trello et l'enregistrement du choix. */
+async function appliquerModele(id, ecrire){
+  modeleId = MODELES[id] ? id : (id && typeof id === "object" ? "surMesure" : MODELE_DEFAUT);
+  modele = MODELES[id] || (typeof id === "object" ? id : MODELES[MODELE_DEFAUT]);
+  if(typeof id === "object"){ modeleId = "surMesure"; MODELES.surMesure = id; }
+  majQNOM();
+
+  document.querySelector(".axe-y .haut").textContent = modele.axeY.haut;
+  document.querySelector(".axe-y .bas").textContent  = modele.axeY.bas;
+  const x = document.querySelectorAll(".axe-x span");
+  x[0].textContent = modele.axeX.gauche;
+  x[1].textContent = modele.axeX.droite;
+  [1,2,3,4].forEach(q => {
+    document.querySelector(`#q${q} h2 .nom`).textContent = modele.quads[q].nom;
+    document.querySelector(`#q${q} h2 .def`).textContent = modele.quads[q].def;
+  });
+  document.querySelector("header .titre").innerHTML =
+    modele.nom.replace("×", '<span>×</span>');
+  render();
+
+  if(ecrire){
+    state.modele = (modeleId === "surMesure") ? modele : modeleId;
+    setStatus("Renommage des étiquettes…");
+    try{
+      for(const def of QUADS){
+        if(labelIds[def.q]) await api(`/labels/${labelIds[def.q]}`, "PUT", `name=${encodeURIComponent(nomEtiquette(def.q))}`);
+      }
+      writeState();
+      setStatus(`${cards.length} cartes`);
+      toast(`Axes : ${modele.nom}`, 0);
+    }catch(e){ showError("Les étiquettes n'ont pas pu être renommées : " + e.message); }
   }
 }
 function quadOf(ids){
@@ -1287,8 +1415,8 @@ function render(){
   // soit, sans notification ni relance.
   const aPlacerReel = cards.filter(c => c.quad === 0).length;
   document.title = aPlacerReel
-    ? `${aPlacerReel} à trier · Matrice Urgence × Impact`
-    : "Matrice Urgence × Impact — tout est trié";
+    ? `${aPlacerReel} à trier · ${modele.nom}`
+    : `${modele.nom} — tout est trié`;
   // le zéro s'affiche tel quel : c'est un résultat, pas une absence
   if(arrivee && aPlacer) compterJusqua($("#poolnb"), aPlacer); else $("#poolnb").textContent = aPlacer;
   $("#poolnb").classList.toggle("zero", vide);
@@ -1402,9 +1530,7 @@ function rendreTriage(anime){
   if(!card || (card.quad !== 0 && !anime)){ st.index++; rendreTriage(); return; }
 
   const e = echeance(card);
-  const question = st.etape === "urgent"
-    ? "Est-ce que ça doit être fait bientôt ?"
-    : "Est-ce que ça pèse sur votre activité ?";
+  const question = st.etape === "urgent" ? modele.axeX.question : modele.axeY.question;
   const progression = Math.round(st.index / st.file.length * 100);
 
   ouvrirScene("Tri éclair", `
@@ -1612,6 +1738,86 @@ $("#btnFocus").onclick = () => {
   const b = $("#focusTri");
   if(b) b.onclick = () => { fermerScene(); $("#btnTriage").click(); };
 };
+
+/* ---------- choix des axes ---------- */
+function apercuModele(m){
+  const case_ = q => `<div style="color:var(--q${q})"><i style="background:var(--q${q})"></i>${esc(m.quads[q].nom)}</div>`;
+  return `<div class="apercu">
+    <div class="ylab"><span>${esc(m.axeY.haut)}</span><span>${esc(m.axeY.bas)}</span></div>
+    <div class="cases">${case_(1)}${case_(2)}${case_(3)}${case_(4)}</div>
+    <div class="xlab"><span>${esc(m.axeX.gauche)}</span><span>${esc(m.axeX.droite)}</span></div>
+  </div>`;
+}
+
+function ouvrirChoixAxes(){
+  fermerMenus();
+  const classees = cards.filter(c => c.quad > 0).length;
+  const cartes = Object.entries(MODELES).filter(([id]) => id !== "surMesure").map(([id, m]) => `
+    <button class="modele" data-modele="${id}" aria-current="${id === modeleId}">
+      <span class="titre">${esc(m.nom)}${id === modeleId ? '<span class="actuel">actuel</span>' : ""}</span>
+      <span class="sous">${esc(m.sous)}</span>
+      ${apercuModele(m)}
+    </button>`).join("");
+
+  const sm = MODELES.surMesure || {axeX:{gauche:"",droite:"",question:""}, axeY:{haut:"",bas:"",question:""},
+    quads:{1:{nom:"",def:""},2:{nom:"",def:""},3:{nom:"",def:""},4:{nom:"",def:""}}};
+
+  ouvrirScene("Axes de la matrice", `
+    <div class="modeles">
+      ${cartes}
+      <details class="modele" ${modeleId === "surMesure" ? "open" : ""}>
+        <summary class="titre" style="cursor:pointer">Sur mesure${modeleId === "surMesure" ? '<span class="actuel">actuel</span>' : ""}</summary>
+        <span class="sous">vos propres axes et vos propres mots</span>
+        <div class="surmesure">
+          <div class="duo">
+            <div><label for="smXg">Colonne de gauche</label><input id="smXg" value="${esc(sm.axeX.gauche)}" placeholder="Urgent"></div>
+            <div><label for="smXd">Colonne de droite</label><input id="smXd" value="${esc(sm.axeX.droite)}" placeholder="Pas urgent"></div>
+          </div>
+          <div><label for="smQx">Question posée pendant le tri, pour la colonne</label><input id="smQx" value="${esc(sm.axeX.question)}" placeholder="Est-ce que ça doit être fait bientôt ?"></div>
+          <div class="duo">
+            <div><label for="smYh">Ligne du haut</label><input id="smYh" value="${esc(sm.axeY.haut)}" placeholder="Fort impact"></div>
+            <div><label for="smYb">Ligne du bas</label><input id="smYb" value="${esc(sm.axeY.bas)}" placeholder="Faible impact"></div>
+          </div>
+          <div><label for="smQy">Question posée pendant le tri, pour la ligne</label><input id="smQy" value="${esc(sm.axeY.question)}" placeholder="Est-ce que ça pèse sur votre activité ?"></div>
+          <div class="duo">
+            <div><label for="smN1">Case haut gauche</label><input id="smN1" value="${esc(sm.quads[1].nom)}" placeholder="Faire maintenant"></div>
+            <div><label for="smN2">Case haut droite</label><input id="smN2" value="${esc(sm.quads[2].nom)}" placeholder="Planifier"></div>
+          </div>
+          <div class="duo">
+            <div><label for="smN3">Case bas gauche</label><input id="smN3" value="${esc(sm.quads[3].nom)}" placeholder="Expédier"></div>
+            <div><label for="smN4">Case bas droite</label><input id="smN4" value="${esc(sm.quads[4].nom)}" placeholder="Laisser tomber"></div>
+          </div>
+          <div><button class="btn-plein" id="smValider">Appliquer ces axes</button></div>
+        </div>
+      </details>
+    </div>
+    ${classees ? `<p class="avert">Vos ${classees} cartes déjà classées gardent leur case. Ce sont les mots qui changent, pas les positions : dans Trello, les étiquettes sont renommées, jamais recréées.</p>` : ""}
+  `, "", 100);
+
+  document.querySelectorAll(".modele[data-modele]").forEach(b => {
+    b.onclick = async () => { fermerScene(); await appliquerModele(b.dataset.modele, true); };
+  });
+  const v = $("#smValider");
+  if(v) v.onclick = async () => {
+    const val = id => $("#" + id).value.trim();
+    const perso = {
+      nom: (val("smYh") || "Ligne") + " × " + (val("smXg") || "Colonne"),
+      sous: "vos axes",
+      axeX: {gauche: val("smXg") || "Oui", droite: val("smXd") || "Non",
+             question: val("smQx") || "Première question ?"},
+      axeY: {haut: val("smYh") || "Oui", bas: val("smYb") || "Non",
+             question: val("smQy") || "Seconde question ?"},
+      quads: {
+        1:{nom: val("smN1") || "Case 1", def: `${val("smXg")||"oui"}, ${val("smYh")||"oui"}`},
+        2:{nom: val("smN2") || "Case 2", def: `${val("smXd")||"non"}, ${val("smYh")||"oui"}`},
+        3:{nom: val("smN3") || "Case 3", def: `${val("smXg")||"oui"}, ${val("smYb")||"non"}`},
+        4:{nom: val("smN4") || "Case 4", def: `${val("smXd")||"non"}, ${val("smYb")||"non"}`}
+      }
+    };
+    fermerScene();
+    await appliquerModele(perso, true);
+  };
+}
 
 /* ---------- bilan hebdo ---------- */
 $("#btnBilan").onclick = () => {
