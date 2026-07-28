@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Matrice Urgence × Impact — FREELANCE Pilotage</title>
+<title>Quadratt</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,800&family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;1,6..72,300;1,6..72,400&display=swap" rel="stylesheet">
@@ -87,7 +87,19 @@ input::placeholder{color:var(--q4)}
 .note{font-family:var(--serif);font-size:.95rem;line-height:1.65;color:var(--encre2);border-left:2px solid var(--filet-fort);padding-left:16px;margin-top:34px}
 
 /* =================== application =================== */
-#app{display:none;height:100vh;grid-template-rows:auto auto 1fr;overflow:hidden}
+#app{display:none;height:100vh;grid-template-rows:auto auto auto 1fr;overflow:hidden}
+#carnetBar{
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  padding:9px 16px;background:var(--papier2);border-bottom:1px solid var(--filet);font-size:13px
+}
+#carnetBar[hidden]{display:none}
+#carnetBar .quoi{font-family:var(--serif);font-style:italic;color:var(--encre2)}
+#carnetBar .spacer{flex:1}
+#carnetBar .fort{font-weight:800;letter-spacing:.1em;text-transform:uppercase;font-size:11px}
+#ajout{padding:12px 14px;border-bottom:1px solid var(--filet);display:flex;gap:8px}
+#ajout[hidden]{display:none}
+#ajout input{font-size:13.5px}
+#ajout button{white-space:nowrap}
 
 /* Bandeau du mode démonstration : présent en permanence, pour qu'on ne
    croie jamais avoir rangé de vraies cartes. */
@@ -111,8 +123,9 @@ header{
   display:flex;align-items:center;gap:8px;padding:10px 16px;
   border-bottom:1px solid var(--filet);flex-wrap:wrap;background:var(--papier)
 }
-header .titre{font-weight:800;font-size:14px;letter-spacing:-.01em;margin-right:6px;white-space:nowrap}
-header .titre span{font-family:var(--serif);font-style:italic;font-weight:300;letter-spacing:0}
+header .titre{font-weight:800;font-size:15px;letter-spacing:-.01em;margin-right:6px;white-space:nowrap}
+header .titre span{font-family:var(--serif);font-style:italic;font-weight:300;letter-spacing:0;
+  font-size:13px;color:var(--encre2);margin-left:5px}
 header .spacer{flex:1}
 #status{font-family:var(--serif);font-style:italic;font-size:13px;color:var(--encre2);white-space:nowrap}
 #search{width:150px;font-size:13px}
@@ -446,11 +459,12 @@ html.sans-mouvement *,html.sans-mouvement *::before{
 <body>
 
 <section id="setup">
-  <div class="kicker">Tableau FREELANCE — Pilotage</div>
-  <h1>Urgence<br>× Impact</h1>
-  <p class="chapeau">Vos cartes Trello, posées sur une table de tri. Vous rangez, <em>l'outil écrit dans Trello</em>. Rien à recopier, rien à maintenir en double.</p>
+  <div class="kicker">Trier avant de faire</div>
+  <h1>Quadratt</h1>
+  <p class="chapeau">Vos cartes, posées sur une table de tri. Deux questions par carte, quatre cases, <em>et le tas disparaît</em>.</p>
   <a class="btn btn-plein" id="connect" href="#">Se connecter avec Trello</a>
-  <p class="ou">Vous préférez voir avant de connecter quoi que ce soit ?<button id="btnDemo">Essayer sans compte</button></p>
+  <p class="ou">Pas de Trello ?<button id="btnCarnet">Ouvrir un carnet local</button></p>
+  <p class="ou">Juste regarder d'abord ?<button id="btnDemo">Voir avec des cartes d'exemple</button></p>
   <p id="setupmsg"></p>
 
   <div class="regle"></div>
@@ -470,6 +484,12 @@ html.sans-mouvement *,html.sans-mouvement *::before{
 </section>
 
 <div id="app">
+  <div id="carnetBar" hidden>
+    <span class="fort">Carnet local</span>
+    <span class="quoi">vos cartes restent dans ce navigateur, sur cette machine</span>
+    <span class="spacer"></span>
+    <button id="carnetVersTrello">Connecter Trello</button>
+  </div>
   <div id="demoBar" hidden>
     <span class="fort">Démonstration</span>
     <span class="quoi">cartes d'exemple, rien n'est enregistré nulle part</span>
@@ -477,7 +497,7 @@ html.sans-mouvement *,html.sans-mouvement *::before{
     <button id="demoConnecter">Connecter mon Trello</button>
   </div>
   <header>
-    <div class="titre">Urgence <span>×</span> Impact</div>
+    <div class="titre">Quadratt <span id="axesNom"></span></div>
     <select id="listfilter" aria-label="Filtrer par liste"></select>
     <input id="search" placeholder="Filtrer" aria-label="Filtrer par mot">
     <button id="btnTriage">Tri éclair</button>
@@ -495,6 +515,10 @@ html.sans-mouvement *,html.sans-mouvement *::before{
         <div id="poolnb">0</div>
         <div id="poolsub"></div>
         <div id="poolneuf" hidden></div>
+      </div>
+      <div id="ajout" hidden>
+        <input id="carnetTexte" placeholder="Ajouter une carte" aria-label="Ajouter une carte au carnet">
+        <button id="carnetAjouter">Ajouter</button>
       </div>
       <div id="poollist" class="zone" data-q="0"></div>
     </aside>
@@ -601,7 +625,11 @@ const LS = "matrice-trello-auth";
    Elle est donc écrite dans la description d'UNE carte dédiée et archivée :
    un appel en lecture, un en écriture, quel que soit le nombre de cartes.
    La mémoire suit le compte Trello, pas le navigateur. */
-const STATE_CARD_NAME = "Matrice Urgence x Impact — mémoire de l'outil (ne pas supprimer)";
+const NOM_PRODUIT = "Quadratt";
+const STATE_CARD_NAME = "Quadratt — mémoire de l'outil (ne pas supprimer)";
+// Noms portés avant le baptême du produit : sans ce repêchage, la carte
+// mémoire ne serait plus retrouvée et tout l'historique repartirait de zéro.
+const STATE_CARD_ANCIENS = ["Matrice Urgence x Impact — mémoire de l'outil (ne pas supprimer)"];
 const STATE_ID_KEY = "matrice-state-card-id";
 const STATE_CACHE_KEY = "matrice-state-cache";
 const MARK_START = "<!--MATRICE_DATA";
@@ -652,6 +680,91 @@ function vibrer(ms){
    La démo donne le produit complet sur des cartes d'exemple, sans compte et
    sans le moindre appel réseau : rien n'est lu, rien n'est écrit. */
 let demo = false, demoSeq = 0;
+
+/* ---------- carnet local ----------
+   Pour qui n'a pas Trello. Les cartes vivent dans ce navigateur, sur cette
+   machine : rien n'est hébergé, donc rien n'est à confier à personne. La
+   limite est assumée et annoncée, elle ne suit pas d'un appareil à l'autre.
+   L'export produit un fichier que l'on peut ranger où l'on veut. */
+let carnet = false;
+const CARNET_KEY = "quadratt-carnet";
+const LISTE_CARNET = [{id:"carnet", name:"Carnet"}];
+
+function sansTrello(){ return demo || carnet; }
+
+function sauverCarnet(){
+  if(!carnet) return;
+  try{
+    localStorage.setItem(CARNET_KEY, JSON.stringify({version:1, cards, state}));
+  }catch(e){
+    showError("Le carnet n'a pas pu être enregistré dans ce navigateur : " + e.message);
+  }
+}
+
+function demarrerCarnet(contenu){
+  carnet = true; demo = false;
+  auth = {key:"carnet", token:"carnet"};
+  labelIds = {1:"carnet-q1", 2:"carnet-q2", 3:"carnet-q3", 4:"carnet-q4"};
+  lists = LISTE_CARNET;
+  const brut = contenu || loadJSON(CARNET_KEY, null);
+  cards = (brut && Array.isArray(brut.cards)) ? brut.cards : [];
+  state = Object.assign(emptyState(), (brut && brut.state) || {});
+  nouvellesIds = new Set();
+
+  $("#setup").style.display = "none";
+  $("#app").style.display = "grid";
+  $("#carnetBar").hidden = false;
+  $("#demoBar").hidden = true;
+  premierRendu = true;
+  appliquerModele(state.modele || MODELE_DEFAUT, false);
+  setStatus(cards.length ? `${cards.length} cartes` : "carnet vide");
+  sauverCarnet();
+}
+
+// Ajout d'une carte au carnet, hors séance de tri : sans ça, un carnet vide
+// n'aurait aucun moyen d'être rempli.
+async function ajouterAuCarnet(){
+  const champ = $("#carnetTexte");
+  const nom = (champ.value || "").trim();
+  if(!nom){ champ.focus(); return; }
+  cards.push({id:"c" + Date.now() + Math.floor(Math.random()*1000), name:nom, list:"Carnet",
+              due:null, dueComplete:false, url:"", labels:[], quad:0});
+  champ.value = "";
+  sauverCarnet();
+  render();
+  vibrer(8);
+  champ.focus();
+}
+
+function exporterCarnet(){
+  const blob = new Blob([JSON.stringify({version:1, cards, state}, null, 1)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "quadratt-carnet.json";
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  toast("Carnet exporté", 0);
+}
+
+function importerCarnet(){
+  const input = document.createElement("input");
+  input.type = "file"; input.accept = "application/json,.json";
+  input.onchange = () => {
+    const f = input.files && input.files[0];
+    if(!f) return;
+    const lecteur = new FileReader();
+    lecteur.onload = () => {
+      try{
+        const brut = JSON.parse(lecteur.result);
+        if(!brut || !Array.isArray(brut.cards)) throw new Error("fichier non reconnu");
+        demarrerCarnet(brut);
+        toast(`Carnet importé, ${brut.cards.length} cartes`, 0);
+      }catch(e){ showError("Ce fichier n'est pas un carnet Quadratt : " + e.message); }
+    };
+    lecteur.readAsText(f);
+  };
+  input.click();
+}
 
 function cartesDemo(){
   const j = n => new Date(Date.now() + n*86400000).toISOString();
@@ -734,7 +847,7 @@ function creds(){ return `key=${encodeURIComponent(auth.key)}&token=${encodeURIC
 // passés dans l'adresse, ils la font dépasser la longueur acceptée et la
 // requête échoue avec un simple "Failed to fetch", sans code d'erreur.
 async function api(path, method="GET", params="", corps=null){
-  if(demo) return apiDemo(path, method);
+  if(sansTrello()) return apiDemo(path, method);
   const sep = path.includes("?") ? "&" : "?";
   const url = `https://api.trello.com/1${path}${sep}${creds()}${params?"&"+params:""}`;
   const opts = {method};
@@ -786,7 +899,7 @@ function encodeState(st){
       return `- ${d} — ${e.via === "archive" ? "archivée" : "terminée"} — ${QNOM[e.quad] || "non classée"} — ${e.name}`;
     });
   return [
-    "Cette carte est la mémoire de la Matrice Urgence x Impact.",
+    `Cette carte est la mémoire de ${NOM_PRODUIT}.`,
     "",
     "Elle retient depuis quand chaque carte est en Q1, et ce que sont devenues les",
     "cartes sorties du tableau, informations que Trello ne conserve pas de façon",
@@ -824,7 +937,13 @@ async function findOrCreateStateCard(){
     }catch(e){ /* identifiant périmé : on retombe sur la recherche par nom */ }
   }
   const closed = await api(`/boards/${BOARD}/cards/closed`, "GET", "fields=id,name,desc");
-  const hit = (closed || []).find(c => c.name === STATE_CARD_NAME);
+  let hit = (closed || []).find(c => c.name === STATE_CARD_NAME);
+  if(!hit){
+    // Carte créée sous l'ancien nom : on la reprend et on la renomme, plutôt
+    // que d'en fabriquer une seconde et de perdre l'historique.
+    hit = (closed || []).find(c => STATE_CARD_ANCIENS.includes(c.name));
+    if(hit) await api(`/cards/${hit.id}`, "PUT", "", {name: STATE_CARD_NAME});
+  }
   if(hit){ localStorage.setItem(STATE_ID_KEY, hit.id); return hit; }
   setStatus("Création de la carte mémoire…");
   const made = await api(`/cards`, "POST", "", {
@@ -850,6 +969,7 @@ let writeChain = Promise.resolve();
 function writeState(){
   // Les écritures s'enchaînent : chacune relit la version distante avant
   // d'écrire, pour ne pas écraser ce qu'un autre poste aurait ajouté.
+  if(carnet){ sauverCarnet(); return writeChain; }
   saveJSON(STATE_CACHE_KEY, state);
   writeChain = writeChain.then(async () => {
     if(!stateCardId) return;
@@ -917,7 +1037,11 @@ window.addEventListener("unhandledrejection", e => {
 $("#connect").href = authorizeUrl(true);
 $("#manuallink").href = authorizeUrl(false);
 $("#btnDemo").onclick = () => demarrerDemo();
+$("#btnCarnet").onclick = () => demarrerCarnet();
 $("#demoConnecter").onclick = () => { location.href = authorizeUrl(true); };
+$("#carnetVersTrello").onclick = () => { location.href = authorizeUrl(true); };
+$("#carnetAjouter").onclick = () => ajouterAuCarnet();
+$("#carnetTexte").onkeydown = e => { if(e.key === "Enter"){ e.preventDefault(); ajouterAuCarnet(); } };
 
 // Réglages et actions rares derrière un seul bouton : l'en-tête ne garde que
 // les trois actions du travail quotidien.
@@ -932,9 +1056,11 @@ $("#btnPlus").onclick = ev => {
     `<button id="mAnim" role="menuitemcheckbox" aria-checked="${coupe}">
        <span class="coche">${coupe ? "✓" : ""}</span>Sans animation</button>
      <div class="sep"></div>
-     <button id="mAxes">Changer les axes…</button>
-     <button id="mRecharger">Recharger depuis Trello</button>
-     <button id="mSortir">Se déconnecter</button>`;
+     <button id="mAxes">Changer les axes…</button>`
+   + (carnet
+       ? `<button id="mExport">Exporter le carnet</button><button id="mImport">Importer un carnet…</button>`
+       : `<button id="mRecharger">Recharger depuis Trello</button>`)
+   + `<button id="mSortir">${carnet ? "Fermer le carnet" : "Se déconnecter"}</button>`;
   document.body.appendChild(m);
   placerMenu(m, $("#btnPlus"));
   $("#btnPlus").setAttribute("aria-expanded", "true");
@@ -944,7 +1070,9 @@ $("#btnPlus").onclick = ev => {
     fermerMenus();
   };
   $("#mAxes").onclick = () => ouvrirChoixAxes();
-  $("#mRecharger").onclick = () => { fermerMenus(); if(demo) demarrerDemo(); else load(); };
+  if($("#mRecharger")) $("#mRecharger").onclick = () => { fermerMenus(); if(demo) demarrerDemo(); else load(); };
+  if($("#mExport")) $("#mExport").onclick = () => { fermerMenus(); exporterCarnet(); };
+  if($("#mImport")) $("#mImport").onclick = () => { fermerMenus(); importerCarnet(); };
   $("#mSortir").onclick = () => { localStorage.removeItem(LS); location.reload(); };
   $("#mAnim").focus();
 };
@@ -984,6 +1112,9 @@ async function tryAuth(token, echec){
   if(saved){
     try{ auth = JSON.parse(saved); if(auth && auth.token){ start(); return; } }catch(e){}
   }
+  // Un carnet déjà commencé se rouvre tout seul : c'est la promesse faite,
+  // retrouver ses cartes en revenant.
+  if(localStorage.getItem(CARNET_KEY)){ demarrerCarnet(); return; }
   if(document.referrer.includes("trello.com")){
     $("#setupmsg").textContent = "Trello a validé l'autorisation, mais n'a pas renvoyé le code à cette page. Utilisez la méthode ci-dessous, elle fonctionne à tous les coups.";
     $("#fallback").open = true;
@@ -1074,8 +1205,8 @@ async function appliquerModele(id, ecrire){
     document.querySelector(`#q${q} h2 .nom`).textContent = modele.quads[q].nom;
     document.querySelector(`#q${q} h2 .def`).textContent = modele.quads[q].def;
   });
-  document.querySelector("header .titre").innerHTML =
-    modele.nom.replace("×", '<span>×</span>');
+  const axesNom = document.getElementById("axesNom");
+  if(axesNom) axesNom.textContent = modele.nom;
   render();
 
   if(ecrire){
@@ -1282,9 +1413,11 @@ function joursEnQ1(c){
 }
 
 function ouvrirCarteTrello(c){
-  // En démonstration, les cartes n'existent pas dans Trello : ouvrir leur
-  // lien enverrait sur une page d'erreur.
+  // En démonstration comme au carnet, les cartes n'existent pas dans Trello :
+  // ouvrir leur lien enverrait sur une page d'erreur.
+  if(carnet){ toast("Les cartes du carnet n'existent que dans ce navigateur", 0); return; }
   if(demo){ toast("En démonstration, ces cartes n'existent pas dans Trello", 0); return; }
+  if(!c.url){ toast("Cette carte n'a pas de lien Trello", 0); return; }
   window.open(c.url, "_blank", "noopener");
 }
 
@@ -1430,15 +1563,18 @@ function render(){
     }
   });
 
+  const ajout = $("#ajout");
+  if(ajout) ajout.hidden = !carnet;
+
   const aPlacer = vues.filter(c => c.quad === 0).length;
   const vide = aPlacer === 0 && cards.length > 0;
 
   // Le titre de l'onglet dit ce qui reste : le rappel le plus discret qui
   // soit, sans notification ni relance.
   const aPlacerReel = cards.filter(c => c.quad === 0).length;
-  document.title = aPlacerReel
-    ? `${aPlacerReel} à trier · ${modele.nom}`
-    : `${modele.nom} — tout est trié`;
+  document.title = !cards.length ? NOM_PRODUIT
+    : aPlacerReel ? `${aPlacerReel} à trier · ${NOM_PRODUIT}`
+    : `${NOM_PRODUIT} — tout est trié`;
   // le zéro s'affiche tel quel : c'est un résultat, pas une absence
   if(arrivee && aPlacer) compterJusqua($("#poolnb"), aPlacer); else $("#poolnb").textContent = aPlacer;
   $("#poolnb").classList.toggle("zero", vide);
@@ -1458,7 +1594,9 @@ function render(){
   // Boutons conscients de l'état : ne jamais proposer une action terminée.
   const bt = $("#btnTriage");
   bt.disabled = aPlacer === 0;
-  bt.innerHTML = aPlacer === 0 ? "Tout est trié" : `Tri éclair <span class="btn-compte">${aPlacer}</span>`;
+  bt.innerHTML = !cards.length ? "Aucune carte"
+    : aPlacer === 0 ? "Tout est trié"
+    : `Tri éclair <span class="btn-compte">${aPlacer}</span>`;
   bt.title = aPlacer === 0 ? "Plus aucune carte à trier" : `${aPlacer} carte(s) à passer en revue (raccourci : T)`;
 
   // L'alerte porte sur le vrai total, pas sur ce que le filtre laisse voir.
@@ -1614,7 +1752,7 @@ async function creerCarte(){
     });
     const nomListe = (lists.find(l => l.id === idListe) || {}).name || "?";
     cards.push({id:faite.id, name:nom, list:nomListe, due:null, dueComplete:false,
-                url:faite.shortUrl || faite.url, labels:[], quad});
+                url: carnet ? "" : (faite.shortUrl || faite.url), labels:[], quad});
     if(quad === 1) state.q1since[faite.id] = nowISO();
     writeState();
     champ.value = "";
